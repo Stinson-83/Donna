@@ -27,6 +27,7 @@ All events share: event, ts, turn_id, user_id, schema_version.
 """
 from __future__ import annotations
 
+import asyncio
 import functools
 import json
 import logging
@@ -41,6 +42,35 @@ from typing import Any, Callable, Iterator
 logger = logging.getLogger(__name__)
 
 _SCHEMA_VERSION = 1
+
+# Live tap: in-process subscribers that want events as they happen (the SSE chat
+# stream forwards tool.call/turn.end so the UI can show what Donna is doing in
+# real time). This is a side-channel — JSONL logging is unaffected, and with no
+# subscribers there is zero overhead.
+_LIVE_SUBSCRIBERS: set[asyncio.Queue] = set()
+
+
+def subscribe_live() -> asyncio.Queue:
+    """Register a queue to receive every emitted event payload. Call from inside
+    a running event loop; remember to unsubscribe_live() in a finally block."""
+    q: asyncio.Queue = asyncio.Queue(maxsize=512)
+    _LIVE_SUBSCRIBERS.add(q)
+    return q
+
+
+def unsubscribe_live(q: asyncio.Queue) -> None:
+    _LIVE_SUBSCRIBERS.discard(q)
+
+
+def _publish_live(payload: dict[str, Any]) -> None:
+    if not _LIVE_SUBSCRIBERS:
+        return
+    for q in list(_LIVE_SUBSCRIBERS):
+        try:
+            q.put_nowait(payload)
+        except Exception:
+            # Full queue or wrong loop — drop the event, never break a turn.
+            pass
 
 _OBS_LOG_PATH = Path(os.getenv("DONNA_OBS_LOG", ".donna/events.jsonl"))
 _OBS_STDOUT = os.getenv("DONNA_OBS_STDOUT", "0") == "1"
@@ -71,6 +101,7 @@ def emit(event: str, **data: Any) -> None:
         "schema_version": _SCHEMA_VERSION,
     }
     payload.update(data)
+    _publish_live(payload)
     try:
         line = json.dumps(payload, default=str)
     except Exception:

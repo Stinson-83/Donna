@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "378633882524",
+    "project_id": "donna-56325",
+    "storage_bucket": "donna-56325.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:378633882524:android:6c194920d6d4577ce6d659",
+        "android_client_info": {
+          "package_name": "ai.donna.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBHaGYqzdJ63XljoxXBvNMz-yXd-s6lIQc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

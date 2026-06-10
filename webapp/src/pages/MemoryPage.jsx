@@ -2,6 +2,7 @@ import Reveal from '../components/Reveal.jsx'
 import MemoryConstellation from '../components/MemoryConstellation.jsx'
 import useRemote from '../components/useRemote.js'
 import { getMemory } from '../cognition.js'
+import { isDemo } from '../identity.js'
 import { MEMORY_RECENT, MEMORY_SECTIONS } from '../data/mockData.js'
 
 function Confidence({ level }) {
@@ -20,7 +21,10 @@ function Confidence({ level }) {
 }
 
 export default function MemoryPage() {
-  const recent = useRemote(getMemory, MEMORY_RECENT)
+  const demo = isDemo()
+  const recent = useRemote(getMemory, demo ? MEMORY_RECENT : [])
+  const hasMemories = recent.length > 0
+
   return (
     <div className="scroll flex h-full flex-col overflow-y-auto">
       <div className="px-7 pb-28 pt-12">
@@ -29,12 +33,22 @@ export default function MemoryPage() {
           <h1 className="mt-3 font-serif text-[34px] lowercase text-ink">memory</h1>
         </Reveal>
 
-        {/* the constellation — the hero */}
-        <Reveal delay={150} className="fade-in mt-6">
-          <MemoryConstellation />
-        </Reveal>
+        {!demo && !hasMemories && (
+          <p className="mt-6 text-[15px] leading-relaxed lowercase text-soft">
+            nothing here yet. everything you tell me — chat, journal, a voice note —
+            lands here as evidence. it's what my beliefs are built from.
+          </p>
+        )}
+
+        {/* the constellation — the hero (only once there's something to map) */}
+        {hasMemories && (
+          <Reveal delay={150} className="fade-in mt-6">
+            <MemoryConstellation />
+          </Reveal>
+        )}
 
         {/* recent memories — editorial, no boxes */}
+        {hasMemories && (
         <Reveal delay={300} className="mt-10">
           <div className="label mb-6">recent</div>
           <div>
@@ -61,8 +75,10 @@ export default function MemoryPage() {
             ))}
           </div>
         </Reveal>
+        )}
 
-        {/* areas — a quiet index */}
+        {/* areas — a quiet index (demo only; the real index builds with use) */}
+        {demo && (
         <Reveal delay={420} className="mt-14">
           <div className="label mb-5">areas</div>
           <div>
@@ -80,6 +96,7 @@ export default function MemoryPage() {
             ))}
           </div>
         </Reveal>
+        )}
       </div>
     </div>
   )

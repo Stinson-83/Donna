@@ -50,5 +50,12 @@ class Settings(BaseSettings):
     composio_api_key: str = ""
     composio_webhook_secret: str = ""
 
+    # Push notifications (Firebase Cloud Messaging, HTTP v1). When unset, push
+    # is a silent no-op. fcm_service_account_json is the service-account JSON
+    # (inline string OR a path to the .json); project id defaults to its
+    # project_id when fcm_project_id is blank.
+    fcm_service_account_json: str = ""
+    fcm_project_id: str = ""
+
 
 settings = Settings()

@@ -32,4 +32,6 @@
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Android 13+ requires this declared AND requested at runtime for push to show. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 </manifest>

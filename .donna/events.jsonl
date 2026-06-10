@@ -528,3 +528,7 @@
 {"event": "tool.call", "ts": "2026-06-10T01:22:57.003+00:00", "turn_id": null, "user_id": null, "schema_version": 1, "tool": "mcp__donna__schedule_reminder", "tool_short": "schedule_reminder", "call_id": "call_1", "input_keys": ["text", "in_minutes"]}
 {"event": "tool.call", "ts": "2026-06-10T01:22:57.004+00:00", "turn_id": null, "user_id": null, "schema_version": 1, "tool": "mcp__donna__schedule_reminder", "tool_short": "schedule_reminder", "call_id": "call_2", "input_keys": ["text", "in_minutes"]}
 {"event": "hook.deny", "ts": "2026-06-10T01:22:57.005+00:00", "turn_id": null, "user_id": null, "schema_version": 1, "tool": "mcp__donna__schedule_reminder", "decision_kind": "duplicate_write", "reason": "schedule_reminder already called with identical args this turn."}
+{"event": "tool.call", "ts": "2026-06-10T14:01:07.831+00:00", "turn_id": null, "user_id": "test-uuid", "schema_version": 1, "tool": "mcp__x__recall_episodic", "tool_short": "recall_episodic"}
+{"event": "tool.call", "ts": "2026-06-10T14:01:07.882+00:00", "turn_id": null, "user_id": "test-uuid", "schema_version": 1, "tool": "x__send_burst", "tool_short": "send_burst"}
+{"event": "tool.call", "ts": "2026-06-10T14:01:48.728+00:00", "turn_id": null, "user_id": "test-uuid", "schema_version": 1, "tool": "mcp__x__recall_episodic", "tool_short": "recall_episodic"}
+{"event": "tool.call", "ts": "2026-06-10T14:01:48.779+00:00", "turn_id": null, "user_id": "test-uuid", "schema_version": 1, "tool": "x__send_burst", "tool_short": "send_burst"}

@@ -77,6 +77,11 @@ from backend.cognition.api.routes import router as _cognition_router  # noqa: E4
 
 app.include_router(_cognition_router)
 
+# Push notifications — device registration + test ping (FCM).
+from api.push import router as _push_router  # noqa: E402
+
+app.include_router(_push_router)
+
 _wa = WhatsAppChannel()
 _brief_refresh_task: asyncio.Task | None = None
 _bootstrap_task: asyncio.Task | None = None  # backgrounded DB/table bootstrap (keeps startup instant)

@@ -2,10 +2,29 @@ import Reveal from '../components/Reveal.jsx'
 import CausalChain from '../components/CausalChain.jsx'
 import useRemote from '../components/useRemote.js'
 import { getPlan } from '../cognition.js'
+import { isDemo } from '../identity.js'
 import { PLAN } from '../data/mockData.js'
 
 export default function PlanPage() {
-  const p = useRemote(getPlan, PLAN)
+  // Demo user opens to a fully-formed day. A real person hasn't given Donna
+  // enough yet — she says so plainly instead of faking a plan.
+  const p = useRemote(getPlan, isDemo() ? PLAN : null)
+
+  if (!p || !p.calendar?.length) {
+    return (
+      <div className="flex h-full flex-col justify-center px-7 pb-16">
+        <div className="label">your day</div>
+        <h1 className="mt-3 font-serif text-[32px] leading-[1.1] lowercase text-ink">
+          i don't have a plan for you yet.
+        </h1>
+        <p className="mt-4 text-[15px] leading-relaxed lowercase text-soft">
+          tell me what's on your plate — a few messages or a journal entry — and
+          i'll start shaping your days and noticing what matters.
+        </p>
+      </div>
+    )
+  }
+
   const peak = p.calendar.find((e) => e.tone === 'peak') || p.calendar[p.calendar.length - 1]
 
   return (

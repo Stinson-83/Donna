@@ -70,6 +70,21 @@ class ChatMessage(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
 
 
+class DeviceToken(Base):
+    """A push target for one of a user's devices (FCM/APNs registration token).
+
+    One user can have many devices. Keyed on the resolved User.id (UUID) so the
+    proactive path — which works in UUIDs — can find where to ping. Tokens are
+    upserted on every app launch and pruned when FCM reports them unregistered."""
+    __tablename__ = "device_tokens"
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=generate_uuid)
+    user_id: Mapped[str] = mapped_column(String, ForeignKey("users.id"), nullable=False, index=True)
+    token: Mapped[str] = mapped_column(String, unique=True, nullable=False)
+    platform: Mapped[str] = mapped_column(String, default="android")  # android | ios | web
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+    last_seen_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+
 class ProceduralRule(Base):
     __tablename__ = "procedural_rules"
     id: Mapped[str] = mapped_column(String, primary_key=True, default=generate_uuid)

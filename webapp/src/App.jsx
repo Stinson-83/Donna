@@ -1,17 +1,25 @@
 import { useEffect, useState } from 'react'
 import { applyTheme, initNative } from './native.js'
+import { initPush } from './push.js'
 import PhoneFrame from './components/PhoneFrame.jsx'
 import TabBar from './components/TabBar.jsx'
 import Fab from './components/Fab.jsx'
+import Capture from './components/Capture.jsx'
+import Onboarding from './components/Onboarding.jsx'
 import PlanPage from './pages/PlanPage.jsx'
 import ChatPage from './pages/ChatPage.jsx'
 import BeliefsPage from './pages/BeliefsPage.jsx'
 import MemoryPage from './pages/MemoryPage.jsx'
+import { hasIdentity, getUserId } from './identity.js'
 
 const PAGES = { plan: PlanPage, chat: ChatPage, beliefs: BeliefsPage, memory: MemoryPage }
 
 export default function App() {
   const [tab, setTab] = useState('plan')
+  // First-run identity gate. A version bump re-renders (and remounts pages on a
+  // new id) once they claim a profile or pick the demo.
+  const [ident, setIdent] = useState(0)
+  const [capture, setCapture] = useState(null) // null | 'journal' | 'capture' | 'voice'
   // Donna notices the time of day. Evenings open in Night.
   const hour = new Date().getHours()
   const [night, setNight] = useState(hour >= 19 || hour < 6)
@@ -24,6 +32,27 @@ export default function App() {
   useEffect(() => {
     applyTheme(night)
   }, [night])
+
+  // Once we know who's using the app, register for push under that identity.
+  // Re-runs on identity change (demo -> claimed profile) to re-key the token.
+  useEffect(() => {
+    if (hasIdentity()) initPush(() => setTab('chat'))
+  }, [ident])
+
+  if (!hasIdentity()) {
+    return (
+      <PhoneFrame night={night}>
+        <Onboarding onDone={() => setIdent((v) => v + 1)} />
+      </PhoneFrame>
+    )
+  }
+
+  // The FAB leaves a thought with Donna. 'a thought' opens the live chat; the
+  // rest open the quick-capture sheet, which writes into the cognition layer.
+  function onFabAction(key) {
+    if (key === 'chat') setTab('chat')
+    else setCapture(key)
+  }
 
   const Page = PAGES[tab]
 
@@ -48,12 +77,14 @@ export default function App() {
           )}
         </button>
 
-        {/* page — keyed so the calm entrance replays on each navigation */}
-        <div key={tab} className="fade-in flex flex-1 flex-col overflow-hidden">
+        {/* page — keyed on identity + tab so it remounts (and refetches the
+            right person's model) on navigation or a profile switch */}
+        <div key={`${getUserId()}:${tab}`} className="fade-in flex flex-1 flex-col overflow-hidden">
           <Page />
         </div>
 
-        {tab !== 'chat' && <Fab onAction={() => setTab('chat')} />}
+        {tab !== 'chat' && <Fab onAction={onFabAction} />}
+        {capture && <Capture kind={capture} onClose={() => setCapture(null)} />}
       </div>
 
       <TabBar tab={tab} onChange={setTab} />

@@ -4,6 +4,7 @@ import CausalChain from '../components/CausalChain.jsx'
 import Sparkline from '../components/Sparkline.jsx'
 import useRemote from '../components/useRemote.js'
 import { getBeliefs, getBeliefHistory, getQuestions } from '../cognition.js'
+import { isDemo } from '../identity.js'
 import { BELIEFS, OPEN_QUESTIONS, REVISIONS } from '../data/mockData.js'
 
 function Field({ label, children }) {
@@ -38,9 +39,25 @@ function WhyIThinkThis({ b }) {
 
 export default function BeliefsPage() {
   const [open, setOpen] = useState(null)
-  const beliefs = useRemote(getBeliefs, BELIEFS)
-  const questions = useRemote(getQuestions, OPEN_QUESTIONS)
-  const revisions = useRemote(getBeliefHistory, REVISIONS)
+  const demo = isDemo()
+  const beliefs = useRemote(getBeliefs, demo ? BELIEFS : [])
+  const questions = useRemote(getQuestions, demo ? OPEN_QUESTIONS : [])
+  const revisions = useRemote(getBeliefHistory, demo ? REVISIONS : [])
+
+  if (!demo && beliefs.length === 0) {
+    return (
+      <div className="flex h-full flex-col justify-center px-7 pb-16">
+        <div className="label">what donna thinks is true</div>
+        <h1 className="mt-3 font-serif text-[32px] leading-[1.1] lowercase text-ink">
+          i haven't earned any beliefs about you yet.
+        </h1>
+        <p className="mt-4 text-[15px] leading-relaxed lowercase text-soft">
+          beliefs aren't assumptions — i form them from evidence. talk to me, and
+          when a pattern holds, it'll show up here with my reasoning and how sure i am.
+        </p>
+      </div>
+    )
+  }
 
   return (
     <div className="scroll flex h-full flex-col overflow-y-auto">
@@ -97,6 +114,7 @@ export default function BeliefsPage() {
         </div>
 
         {/* things i'm still figuring out — beliefs not yet earned */}
+        {questions.length > 0 && (
         <Reveal delay={120}>
           <div className="hairline my-12" />
           <div className="label">where my evidence is split</div>
@@ -117,8 +135,10 @@ export default function BeliefsPage() {
             when one of these resolves, it becomes a belief. when a belief stops holding, it comes back here.
           </p>
         </Reveal>
+        )}
 
         {/* i changed my mind */}
+        {revisions.length > 0 && (
         <Reveal delay={120}>
           <div className="hairline my-12" />
           <div className="label">how my mind has changed</div>
@@ -144,6 +164,7 @@ export default function BeliefsPage() {
             ))}
           </div>
         </Reveal>
+        )}
       </div>
     </div>
   )
