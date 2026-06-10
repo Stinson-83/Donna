@@ -1,0 +1,79 @@
+import Reveal from '../components/Reveal.jsx'
+import CausalChain from '../components/CausalChain.jsx'
+import { PLAN } from '../data/mockData.js'
+
+export default function PlanPage() {
+  const p = PLAN
+  const peak = p.calendar.find((e) => e.tone === 'peak') || p.calendar[p.calendar.length - 1]
+
+  return (
+    <div className="scroll flex h-full flex-col overflow-y-auto">
+      {/* ── First viewport: only date, thesis, the one thing ── */}
+      <section className="flex min-h-full flex-col px-7 pb-10 pt-14">
+        <Reveal delay={0}>
+          <div className="label">{p.date}</div>
+        </Reveal>
+
+        {/* thesis — monumental, the headline of the day */}
+        <Reveal delay={120} className="flex flex-1 flex-col justify-center py-8">
+          <h1 className="font-serif text-[48px] leading-[1.02] tracking-tight text-ink">
+            {p.thesis}
+          </h1>
+          <h1 className="mt-3 font-serif text-[48px] leading-[1.02] tracking-tight text-soft">
+            {p.thesisCoda}
+          </h1>
+        </Reveal>
+
+        {/* the one event that matters today — and why */}
+        <Reveal delay={320}>
+          <div className="flex items-baseline gap-3">
+            <span className="h-1.5 w-1.5 rounded-full" style={{ background: 'rgb(var(--rust))' }} />
+            <span className="label !tracking-[0.1em]">{peak.time}</span>
+          </div>
+          <div className="mt-1 font-serif text-[26px] lowercase text-ink">{peak.title}</div>
+          <CausalChain label="because" steps={p.because} className="mt-6" />
+        </Reveal>
+      </section>
+
+      {/* ── Below the fold ── */}
+      <section className="px-7 pb-28">
+        <Reveal delay={0}>
+          <div className="label mb-5">today's shape</div>
+          <div className="space-y-7 border-l border-line pl-5">
+            {p.calendar.map((e, i) => (
+              <div key={i} className="relative">
+                {e.tone === 'peak' && (
+                  <span
+                    className="absolute -left-[23px] top-2 h-1.5 w-1.5 rounded-full"
+                    style={{ background: 'rgb(var(--rust))' }}
+                  />
+                )}
+                <div className="label !tracking-[0.1em]">{e.time}</div>
+                <div className={`mt-0.5 font-serif text-2xl lowercase ${e.tone === 'peak' ? 'text-ink' : 'text-ink/85'}`}>
+                  {e.title}
+                </div>
+              </div>
+            ))}
+          </div>
+        </Reveal>
+
+        <div className="mt-16">
+          <div className="label mb-4">open loops</div>
+          {p.openLoops.map((l, i) => (
+            <div key={l.id}>
+              {i > 0 && <div className="hairline" />}
+              <div className="flex items-baseline justify-between py-3.5">
+                <span className="text-[17px] lowercase text-ink">{l.text}</span>
+                <span className="text-[12px] lowercase text-soft">{l.meta}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <p className="mt-16 font-serif text-[22px] leading-snug text-ink/90">{p.nudge}</p>
+
+        <p className="mt-20 font-serif text-[20px] italic leading-relaxed text-soft">{p.whisper}</p>
+      </section>
+    </div>
+  )
+}
