@@ -68,6 +68,29 @@ async def _load_user_quiet_hours(
     return sleep, wake
 
 
+async def _load_user_tz(user_id: str) -> str | None:
+    from db.models import User
+
+    async with _session_factory()() as session:
+        return (
+            await session.execute(select(User.timezone).where(User.id == user_id))
+        ).scalar_one_or_none()
+
+
+def _local_time_of(now: datetime, tz_name: str | None) -> time:
+    """Wall-clock time in the user's timezone. `now` is naive UTC by
+    convention; fall back to treating it as already-local on any tz error."""
+    if not tz_name:
+        return now.time()
+    try:
+        from zoneinfo import ZoneInfo
+
+        aware = now if now.tzinfo else now.replace(tzinfo=timezone.utc)
+        return aware.astimezone(ZoneInfo(tz_name)).time()
+    except Exception:
+        return now.time()
+
+
 async def can_fire_proactive(
     user_id: str, source: str, now: datetime | None = None
 ) -> FireDecision:
@@ -78,9 +101,12 @@ async def can_fire_proactive(
     sleep_at = _parse_hhmm(sleep_raw)
     wake_at = _parse_hhmm(wake_raw)
     if sleep_at and wake_at:
-        # Naive: treat `now` as already in user-local TZ. Production should
-        # convert via zoneinfo using the user's timezone column.
-        if _in_quiet_window(now.time(), sleep_at, wake_at):
+        # Convert UTC `now` into the user's local wall clock before comparing
+        # against their sleep/wake window, so quiet hours mean quiet hours
+        # wherever the user actually is.
+        tz_name = await _load_user_tz(user_id)
+        now_local = _local_time_of(now, tz_name)
+        if _in_quiet_window(now_local, sleep_at, wake_at):
             return FireDecision(
                 allowed=False,
                 reason=f"quiet:{sleep_raw}-{wake_raw}",
@@ -121,6 +147,22 @@ async def record_ping(
     suppressed_reason: str | None = None,
 ) -> None:
     async with _session_factory()() as session:
+        # Idempotency guard: a webhook replay must not record a second fired
+        # ping for the same source message, or it would double-count against
+        # the daily quota (and imply a second wake-up that never happened).
+        if suppressed_reason is None and message_ref:
+            existing = (
+                await session.execute(
+                    select(ProactivePing.id)
+                    .where(ProactivePing.user_id == user_id)
+                    .where(ProactivePing.source == source)
+                    .where(ProactivePing.message_ref == message_ref)
+                    .where(ProactivePing.suppressed_reason.is_(None))
+                    .limit(1)
+                )
+            ).first()
+            if existing is not None:
+                return
         session.add(
             ProactivePing(
                 user_id=user_id,

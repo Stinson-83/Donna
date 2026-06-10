@@ -17,6 +17,7 @@ from delivery.messages import (
     OutboundMessage,
     Section,
     TextMessage,
+    VoiceResponseMarker,
 )
 
 from .hooks import _CURRENT_USER_ID, _OUTBOUND_BUFFER
@@ -35,6 +36,29 @@ def set_voice_filter_enabled(enabled: bool) -> None:
 
 def text_content(text: str) -> dict[str, list[dict[str, str]]]:
     return {"content": [{"type": "text", "text": text}]}
+
+
+# Deterministic style wrapper applied to every generated image. Kept
+# template-based on purpose: composing the prompt must NOT be a chained LLM
+# call outside the BRAIN loop (architecture non-negotiable).
+_IMAGE_STYLE_SUFFIX = (
+    "clean, warm, photographic, natural light, tasteful composition, "
+    "no text, no watermark, no logo"
+)
+
+
+async def compose_image_prompt(user_id: str | None, intent: str) -> str:
+    """Turn a one-line intent into a full image-generation prompt.
+
+    Deterministic (no LLM). Raises ValueError on an empty/unusable intent so
+    the image tool can surface "intent invalid". `user_id` is accepted for a
+    future per-user style hook but is intentionally unused today.
+    """
+    cleaned = " ".join((intent or "").split()).strip()
+    if len(cleaned) < 3:
+        raise ValueError("intent too short to compose an image prompt")
+    cleaned = cleaned.rstrip(".")
+    return f"{cleaned}. {_IMAGE_STYLE_SUFFIX}."
 
 
 def send_burst_text(messages: Sequence[Any]) -> str:
@@ -179,6 +203,12 @@ def _build_outbound(item: Any) -> OutboundMessage | Delay | None:
             return None
         caption = str(item.get("caption", "")).strip()
         return ImageMessage(url=url, caption=caption, reply_to_message_id=reply_to)
+
+    if item_type == "voice_response":
+        # A flag, not a bubble: kept in the buffer so voice_synth can detect
+        # the turn should be spoken. The WA renderer never sees it — voice_synth
+        # replaces it (and the text items) with an AudioMessage, or strips it.
+        return VoiceResponseMarker()
 
     if item_type == "delay":
         try:

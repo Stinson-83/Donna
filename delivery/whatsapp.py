@@ -37,6 +37,14 @@ _BUTTON_TITLE_MAX = 20
 _LIST_ROW_TITLE_MAX = 24
 
 
+def _media_ref(url: str) -> dict:
+    """WA media reference: a public http(s) URL uses {"link": ...}; anything
+    else is treated as an uploaded WA media id via {"id": ...}."""
+    if url.startswith("http://") or url.startswith("https://"):
+        return {"link": url}
+    return {"id": url}
+
+
 # ── Channel capabilities (consumed by act/compose prompts) ───────────────────
 
 CAPABILITIES_PROMPT = """\
@@ -211,13 +219,13 @@ class WhatsAppChannel:
             }
 
         if isinstance(message, ImageMessage):
-            image: dict = {"link": message.url}
+            image: dict = _media_ref(message.url)
             if message.caption:
                 image["caption"] = message.caption
             return {**base, "type": "image", "image": image}
 
         if isinstance(message, AudioMessage):
-            return {**base, "type": "audio", "audio": {"link": message.url}}
+            return {**base, "type": "audio", "audio": _media_ref(message.url)}
 
         if isinstance(message, DocumentMessage):
             doc: dict = {"link": message.url, "filename": message.filename}
@@ -229,14 +237,70 @@ class WhatsAppChannel:
 
     # ── HTTP ───────────────────────────────────────────────────────────────────
 
+    # Transient statuses worth retrying (rate limit + upstream/server errors).
+    _RETRY_STATUSES = frozenset({429, 500, 502, 503, 504})
+    _MAX_ATTEMPTS = 3
+
     async def _post(self, payload: dict) -> dict:
+        last_exc: Exception | None = None
         async with httpx.AsyncClient(timeout=10) as client:
-            resp = await client.post(
-                self._messages_url, headers=self._headers, json=payload
-            )
-            if resp.status_code >= 400:
-                logger.error(
-                    "WhatsApp API error %s: %s", resp.status_code, resp.text[:200]
-                )
+            for attempt in range(self._MAX_ATTEMPTS):
+                try:
+                    resp = await client.post(
+                        self._messages_url, headers=self._headers, json=payload
+                    )
+                except httpx.TransportError as exc:
+                    last_exc = exc
+                    logger.warning(
+                        "WhatsApp API transport error (attempt %d/%d): %s",
+                        attempt + 1, self._MAX_ATTEMPTS, exc,
+                    )
+                else:
+                    if resp.status_code < 400:
+                        return resp.json()
+                    if (
+                        resp.status_code in self._RETRY_STATUSES
+                        and attempt < self._MAX_ATTEMPTS - 1
+                    ):
+                        logger.warning(
+                            "WhatsApp API %s (attempt %d/%d), retrying",
+                            resp.status_code, attempt + 1, self._MAX_ATTEMPTS,
+                        )
+                    else:
+                        logger.error(
+                            "WhatsApp API error %s: %s",
+                            resp.status_code, resp.text[:200],
+                        )
+                        resp.raise_for_status()
+                # Exponential backoff with simple jitter-free steps: 0.5s, 1s.
+                if attempt < self._MAX_ATTEMPTS - 1:
+                    await asyncio.sleep(0.5 * (2 ** attempt))
+        if last_exc is not None:
+            raise last_exc
+        raise RuntimeError("WhatsApp send exhausted retries")
+
+    async def upload_media(
+        self, content: bytes, mime_type: str, filename: str = "media"
+    ) -> str | None:
+        """Upload raw bytes to the WA media endpoint and return the media id.
+
+        Used for media Donna generates herself (TTS audio, generated images)
+        where there is no public URL to reference. Returns None on failure so
+        callers can fall back to text.
+        """
+        if not content:
+            return None
+        url = f"{_WA_BASE}/{self._phone_number_id}/media"
+        files = {
+            "file": (filename, content, mime_type),
+            "messaging_product": (None, "whatsapp"),
+            "type": (None, mime_type),
+        }
+        try:
+            async with httpx.AsyncClient(timeout=30) as client:
+                resp = await client.post(url, headers=self._headers, files=files)
                 resp.raise_for_status()
-            return resp.json()
+                return resp.json().get("id")
+        except Exception:
+            logger.exception("WhatsApp media upload failed (%s)", mime_type)
+            return None

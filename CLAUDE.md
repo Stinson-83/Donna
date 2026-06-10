@@ -1,6 +1,6 @@
 # Donna v2
 
-WhatsApp-native personal AI. She/her. Thinking partner with persistent memory and a legible dashboard.
+Belief-native AI companion. She/her. Thinking partner with persistent memory, living across **two surfaces that share one memory**: WhatsApp and the Donna app. The app is understanding-first (Plan / Chat / Beliefs / Memory), not a dashboard — you open it to see what Donna believes about your life, not just to message. Memory is evidence; **beliefs are the product**; Donna forms opinions, notices patterns, and shows her reasoning. Conversation is the interface. Full product definition: `docs/PRODUCT.md`.
 
 ## Non-negotiables
 

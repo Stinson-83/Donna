@@ -31,6 +31,8 @@ class Settings:
     falkordb_username: str
     falkordb_password: str
     gate_log_path: str
+    # Web search provider (Exa). When unset, web tools return status=degraded.
+    exa_api_key: str
 
 
 def _get(name: str, default: str = "") -> str:
@@ -51,6 +53,7 @@ def get_settings() -> Settings:
         falkordb_username=_get("FALKORDB_USERNAME", ""),
         falkordb_password=_get("FALKORDB_PASSWORD", ""),
         gate_log_path=_get("DONNA_GATE_LOG", "donna_gate.jsonl"),
+        exa_api_key=_get("EXA_API_KEY"),
     )
 
 

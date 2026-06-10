@@ -4,7 +4,15 @@ from datetime import datetime, timezone
 import sqlalchemy as sa
 from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Index, Integer, String, Text
 from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+
+
+@compiles(JSONB, "sqlite")
+def _sqlite_jsonb(type_, compiler, **kw):  # type: ignore[no-untyped-def]
+    """Let the Postgres JSONB columns create on SQLite (offline/local dev).
+    SQLite stores them as JSON text; behavior is identical for our usage."""
+    return "JSON"
 
 
 def generate_uuid() -> str:

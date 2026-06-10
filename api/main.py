@@ -14,6 +14,8 @@ from __future__ import annotations
 
 import asyncio
 import dataclasses
+import hashlib
+import hmac
 import logging
 import os
 
@@ -21,6 +23,7 @@ from donna_runtime.env import load_dotenv
 load_dotenv()
 
 from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import PlainTextResponse
 
 from config import settings
@@ -50,10 +53,24 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Donna (Claw-Code)")
 
+# Open CORS so a separately-hosted demo frontend (Claude-designed web app,
+# localhost, etc.) can POST /chat. Tighten allow_origins before any real launch.
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 # Composio webhook ingest (OAuth completions, gmail/calendar events).
 from api.composio_webhook import router as _composio_router  # noqa: E402
 
 app.include_router(_composio_router)
+
+# HTTP chat endpoint for the demo frontend (no WhatsApp required).
+from api.chat import router as _chat_router  # noqa: E402
+
+app.include_router(_chat_router)
 
 _wa = WhatsAppChannel()
 _brief_refresh_task: asyncio.Task | None = None
@@ -335,9 +352,32 @@ async def verify_webhook(request: Request) -> PlainTextResponse:
     mode = params.get("hub.mode")
     token = params.get("hub.verify_token")
     challenge = params.get("hub.challenge") or ""
-    if mode == "subscribe" and token == settings.whatsapp_verify_token:
+    expected = settings.whatsapp_verify_token
+    # Fail closed: if no verify token is configured, reject all challenges
+    # rather than accepting an empty/guessable token.
+    if mode == "subscribe" and expected and hmac.compare_digest(token or "", expected):
         return PlainTextResponse(challenge)
     return PlainTextResponse("forbidden", status_code=403)
+
+
+def _verify_meta_signature(raw_body: bytes, header: str | None) -> bool:
+    """Verify Meta's X-Hub-Signature-256 HMAC over the raw request body.
+
+    Returns True when no app secret is configured (verification disabled) so
+    local/dev deploys keep working, but logs a loud warning so this is never
+    silently off in production. When a secret IS set, the signature must match.
+    """
+    secret = settings.whatsapp_app_secret
+    if not secret:
+        logger.warning(
+            "webhook: WHATSAPP_APP_SECRET unset — inbound signature NOT verified"
+        )
+        return True
+    if not header or not header.startswith("sha256="):
+        return False
+    sent = header.split("=", 1)[1].strip()
+    expected = hmac.new(secret.encode(), raw_body, hashlib.sha256).hexdigest()
+    return hmac.compare_digest(sent, expected)
 
 
 def _parse_dev_phone_numbers(raw: str) -> set[str]:
@@ -407,7 +447,16 @@ async def _forward_webhook(target_url: str, body: dict, label: str) -> None:
 
 @app.post("/webhook")
 async def webhook(request: Request) -> dict:
-    body = await request.json()
+    raw_body = await request.body()
+    if not _verify_meta_signature(raw_body, request.headers.get("X-Hub-Signature-256")):
+        logger.warning("webhook: rejected request with bad/missing signature")
+        return PlainTextResponse("forbidden", status_code=403)
+
+    import json as _json
+    try:
+        body = _json.loads(raw_body) if raw_body else {}
+    except ValueError:
+        return {"status": "ok"}
 
     # All-or-nothing relay (existing behavior).
     if settings.relay_url:

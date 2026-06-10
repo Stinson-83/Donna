@@ -19,9 +19,17 @@ def _clean_url(url: str) -> tuple[str, dict]:
     return clean, connect_args
 
 
-_url, _connect_args = _clean_url(settings.database_url or "postgresql+asyncpg://localhost/donna")
-_engine = create_async_engine(
-    _url, pool_pre_ping=True, pool_size=5, max_overflow=10,
-    connect_args=_connect_args,
-)
+_raw_url = settings.database_url or "postgresql+asyncpg://localhost/donna"
+
+if _raw_url.startswith("sqlite"):
+    # Offline/local dev (e.g. sqlite+aiosqlite:///./donna.db): no Postgres,
+    # no Docker. Skip the asyncpg-specific connect_args and pg pool sizing.
+    _engine = create_async_engine(_raw_url)
+else:
+    _url, _connect_args = _clean_url(_raw_url)
+    _engine = create_async_engine(
+        _url, pool_pre_ping=True, pool_size=5, max_overflow=10,
+        connect_args=_connect_args,
+    )
+
 async_session = async_sessionmaker(_engine, class_=AsyncSession, expire_on_commit=False)

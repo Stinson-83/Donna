@@ -456,8 +456,13 @@ def _detect_voice_request(state: dict[str, Any]) -> bool:
     """Deterministic check: did the user explicitly ask for voice this turn?
 
     Wraps `voice_intent.detect_voice_request` for state-shaped callers.
+    Voice intent is an optional capability; if the module is absent, treat
+    the turn as a normal (non-voice) request rather than crashing.
     """
-    from .voice_intent import detect_voice_request
+    try:
+        from .voice_intent import detect_voice_request
+    except ImportError:
+        return False
 
     return detect_voice_request(state.get("raw_input"))
 

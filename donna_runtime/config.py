@@ -8,9 +8,12 @@ from typing import Literal
 
 TRACE_FILE = Path("donna_traces.jsonl")
 SESSION_STORE_FILE = Path(".donna_sessions.json")
-MODEL_NAME = "claude-sonnet-4-6"
-PROACTIVE_MODEL_NAME = "claude-sonnet-4-6"
-UPGRADE_MODEL_NAME = "claude-sonnet-4-6"
+# Main model is Haiku 4.5 per the CLAUDE.md non-negotiable + cost budget
+# (<$0.01/reactive turn with caching). Sonnet is reserved for the declared
+# upgrade cases only. Override the default via DONNA_MODEL when experimenting.
+MODEL_NAME = os.environ.get("DONNA_MODEL") or "claude-haiku-4-5-20251001"
+PROACTIVE_MODEL_NAME = os.environ.get("DONNA_PROACTIVE_MODEL") or "claude-haiku-4-5-20251001"
+UPGRADE_MODEL_NAME = os.environ.get("DONNA_UPGRADE_MODEL") or "claude-sonnet-4-6"
 
 TOOL_NAMESPACE = "donna"
 MCP_SERVER_NAME = "donna-tools"

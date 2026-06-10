@@ -21,6 +21,15 @@ async def create_tables() -> None:
     if not url_src:
         logger.warning("migrations: DATABASE_URL(_DIRECT) not set; skipping")
         return
+    if url_src.startswith("sqlite"):
+        # Offline/local dev: plain create_all, no asyncpg args, no pg-only ALTER
+        # (the living_profile column is in the model, so create_all makes it).
+        engine = create_async_engine(url_src)
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+        await engine.dispose()
+        logger.info("donna tables created (sqlite)")
+        return
     direct = url_src.replace(
         "postgresql://", "postgresql+asyncpg://", 1
     ).replace(

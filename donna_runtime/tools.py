@@ -1074,12 +1074,18 @@ async def watch(args):
 )
 @traceable(name="donna.tool.image", run_type="tool")
 async def image(args):
-    from .image_client import (
-        ImageProviderError,
-        ImageSafetyError,
-        ImageUploadError,
-        generate_and_upload,
-    )
+    try:
+        from .image_client import (
+            ImageProviderError,
+            ImageSafetyError,
+            ImageUploadError,
+            generate_and_upload,
+        )
+    except ImportError:
+        logger.warning("image tool invoked but image_client is not available")
+        return text_content(
+            "image unavailable: image generation is not configured here. go text."
+        )
 
     user_id = _current_user_id()
     intent = (args.get("intent") or "").strip() if isinstance(args, dict) else ""
@@ -1209,7 +1215,11 @@ def _render_agentic_answer(payload: dict[str, Any]) -> str:
 )
 @traceable(name="donna.tool.web_search", run_type="tool")
 async def web_search(args):
-    from backend.web.search import search_web as _search_web
+    try:
+        from backend.web.search import search_web as _search_web
+    except ImportError:
+        logger.warning("web_search invoked but backend.web.search is not available")
+        return text_content("web_search unavailable: web search is not configured here.")
 
     query = str(args.get("query") or "").strip() if isinstance(args, dict) else ""
     if not query:
@@ -1276,7 +1286,11 @@ async def web_search(args):
 )
 @traceable(name="donna.tool.agentic_web_search", run_type="tool")
 async def agentic_web_search(args):
-    from backend.web.search import agentic_search as _agentic_search
+    try:
+        from backend.web.search import agentic_search as _agentic_search
+    except ImportError:
+        logger.warning("agentic_web_search invoked but backend.web.search is not available")
+        return text_content("agentic_web_search unavailable: web search is not configured here.")
 
     question = str(args.get("question") or "").strip() if isinstance(args, dict) else ""
     if not question:
@@ -1372,7 +1386,11 @@ def _render_research_answer(
 )
 @traceable(name="donna.tool.research", run_type="tool")
 async def research(args):
-    from backend.web.pipeline import run_web_research
+    try:
+        from backend.web.pipeline import run_web_research
+    except ImportError:
+        logger.warning("research invoked but backend.web.pipeline is not available")
+        return text_content("research unavailable: deep web research is not configured here.")
 
     question = str(args.get("question") or "").strip() if isinstance(args, dict) else ""
     if not question:
@@ -1652,8 +1670,18 @@ async def send_burst(args):
     except Exception:
         pass
     result = await send_burst_result(args)
-    from .voice_synth import maybe_synthesize_voice
-    await maybe_synthesize_voice()
+    # Voice synthesis is an optional capability — the module may not be
+    # present in every deployment. Never let its absence (or failure) abort
+    # the terminator, or the post-turn memory hooks below would never fire
+    # and episodic/graph/profile writes would silently stop.
+    try:
+        from .voice_synth import maybe_synthesize_voice
+
+        await maybe_synthesize_voice()
+    except ImportError:
+        logger.debug("send_burst: voice_synth unavailable, skipping voice")
+    except Exception:
+        logger.exception("send_burst: voice synthesis failed, continuing")
     _fire_memory_hooks(_CURRENT_TRACE.get(), args)
     return result
 

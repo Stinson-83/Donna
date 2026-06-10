@@ -21,6 +21,23 @@ _OUTBOUND_BUFFER: ContextVar[list | None] = ContextVar("donna_outbound_buffer", 
 _CHAT_ALREADY_PERSISTED: ContextVar[bool] = ContextVar(
     "donna_chat_already_persisted", default=False
 )
+# Turn-scoped sha256 of the composed image prompt, set by the image tool and
+# read by the post-turn image-event writer (ImageToolEvent.prompt_hash).
+_CURRENT_IMAGE_PROMPT_HASH: ContextVar[str | None] = ContextVar(
+    "donna_image_prompt_hash", default=None
+)
+
+
+def set_image_prompt_hash(prompt_hash: str | None) -> None:
+    """Record the hash of this turn's composed image prompt (idempotency +
+    observability). Mirrors the _CURRENT_USER_ID contextvar pattern."""
+    _CURRENT_IMAGE_PROMPT_HASH.set(prompt_hash)
+
+
+def get_image_prompt_hash() -> str | None:
+    return _CURRENT_IMAGE_PROMPT_HASH.get()
+
+
 # Turn-scoped set of (tool_name, args_hash) to detect within-turn duplicate
 # calls on write tools. Populated in PreToolUse, reset per turn by the runner.
 _TURN_WRITE_SIGNATURES: ContextVar[set[tuple[str, str]] | None] = ContextVar(

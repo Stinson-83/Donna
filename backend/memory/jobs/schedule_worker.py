@@ -7,7 +7,7 @@ import socket
 from datetime import datetime, timedelta, timezone
 from typing import Any, Sequence
 
-from sqlalchemy import select, update
+from sqlalchemy import or_, select, update
 
 from backend.db.models import ChatMessage, DonnaSchedule
 from backend.db.session import async_session
@@ -83,8 +83,28 @@ async def run_once(*, batch_size: int = 25, lock_timeout_s: int = 60) -> int:
     for row in rows:
         attempted += 1
 
-        # Try to lock.
+        # Claim atomically: a single conditional UPDATE so two concurrent
+        # workers can never both win the same row. We win only if the row is
+        # still unfired and either unlocked, lock-expired, or already ours.
+        lock_cutoff = now - timedelta(seconds=lock_timeout_s)
         async with async_session() as session:
+            claim = await session.execute(
+                update(DonnaSchedule)
+                .where(DonnaSchedule.id == row.id)
+                .where(DonnaSchedule.fired.is_(False))
+                .where(
+                    or_(
+                        DonnaSchedule.locked_at.is_(None),
+                        DonnaSchedule.locked_at < lock_cutoff,
+                        DonnaSchedule.locked_by == wid,
+                    )
+                )
+                .values(status="running", locked_at=now, locked_by=wid)
+            )
+            await session.commit()
+            if claim.rowcount != 1:
+                # Another worker holds the lock, or the row already fired.
+                continue
             fresh = (
                 await session.execute(
                     select(DonnaSchedule).where(DonnaSchedule.id == row.id)
@@ -92,17 +112,6 @@ async def run_once(*, batch_size: int = 25, lock_timeout_s: int = 60) -> int:
             ).scalar_one_or_none()
             if fresh is None:
                 continue
-            if fresh.fired:
-                continue
-            if not _lock_expired(fresh.locked_at, timeout_s=lock_timeout_s) and fresh.locked_by and fresh.locked_by != wid:
-                continue
-
-            await session.execute(
-                update(DonnaSchedule)
-                .where(DonnaSchedule.id == fresh.id)
-                .values(status="running", locked_at=now, locked_by=wid)
-            )
-            await session.commit()
 
         try:
             payload = fresh.context or {}

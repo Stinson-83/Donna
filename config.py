@@ -14,7 +14,12 @@ class Settings(BaseSettings):
     supermemory_api_key: str = ""
     whatsapp_token: str = ""
     whatsapp_phone_number_id: str = ""
-    whatsapp_verify_token: str = "aura-verify-token"
+    # No default: a deploy that forgets to set this fails webhook verification
+    # closed rather than accepting a well-known public token.
+    whatsapp_verify_token: str = ""
+    # Meta App Secret — used to verify the X-Hub-Signature-256 HMAC on inbound
+    # webhooks. When set, POST /webhook rejects any unsigned/mis-signed body.
+    whatsapp_app_secret: str = ""
     relay_url: str = ""
     founder_phone: str = ""
     # Per-phone dev re-routing. When both are set, webhooks whose `from`
@@ -36,6 +41,10 @@ class Settings(BaseSettings):
     deepgram_model: str = "nova-3"
     donna_voice_enabled: bool = True
     donna_voice_max_chars: int = 600                    # hard cap per turn (cost + WA voice-note ux)
+
+    # Image generation (fal). When unset, the image tool degrades to text.
+    fal_key: str = ""
+    fal_image_model: str = "fal-ai/flux/schnell"
 
     # Composio: SDK-managed OAuth + webhook ingest for Google integrations.
     composio_api_key: str = ""

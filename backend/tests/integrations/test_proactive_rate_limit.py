@@ -67,8 +67,41 @@ async def test_quiet_hours_blocks(db, monkeypatch):
         "backend.integrations.proactive_rate_limit._load_user_quiet_hours",
         _quiet,
     )
+    # Pin the user's timezone to UTC so the passed `now` is also local time.
+    async def _utc(_user_id):  # noqa: ANN001
+        return "UTC"
+
+    monkeypatch.setattr(
+        "backend.integrations.proactive_rate_limit._load_user_tz", _utc
+    )
+    # 02:30 UTC == 02:30 local in UTC, inside the 23:00-07:00 window.
     decision = await can_fire_proactive(
         "u1", source="email", now=datetime(2026, 4, 25, 2, 30)
     )
     assert decision.allowed is False
     assert "quiet" in decision.reason
+
+
+@pytest.mark.asyncio
+async def test_quiet_hours_uses_user_timezone(db, monkeypatch):
+    """02:30 UTC is mid-morning in Singapore (UTC+8), so a Singapore user
+    with a 23:00-07:00 quiet window should NOT be blocked — quiet hours are
+    evaluated in the user's local time, not UTC."""
+    async def _quiet(_user_id):  # noqa: ANN001
+        return ("23:00", "07:00")
+
+    monkeypatch.setattr(
+        "backend.integrations.proactive_rate_limit._load_user_quiet_hours",
+        _quiet,
+    )
+    async def _sgt(_user_id):  # noqa: ANN001
+        return "Asia/Singapore"
+
+    monkeypatch.setattr(
+        "backend.integrations.proactive_rate_limit._load_user_tz", _sgt
+    )
+    decision = await can_fire_proactive(
+        "u1", source="email", now=datetime(2026, 4, 25, 2, 30)
+    )
+    assert decision.allowed is True
+    assert decision.reason == "ok"

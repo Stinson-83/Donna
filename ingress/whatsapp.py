@@ -289,14 +289,22 @@ async def _parse_one(message: dict, value: dict) -> IngressPayload | None:
 
 async def _download_media(media_id: str) -> bytes | None:
     """Download media from WhatsApp Cloud API. Returns raw bytes."""
+    from ingress.net_guard import is_safe_public_url
+
     headers = {"Authorization": f"Bearer {settings.whatsapp_token}"}
     try:
-        async with httpx.AsyncClient(timeout=15) as client:
+        async with httpx.AsyncClient(timeout=15, follow_redirects=False) as client:
             url_resp = await client.get(
                 f"https://graph.facebook.com/v19.0/{media_id}", headers=headers,
             )
             url_resp.raise_for_status()
             media_url = url_resp.json()["url"]
+            # Meta returns the CDN URL, but verify it points at a public host
+            # before fetching so a compromised/spoofed response can't pull from
+            # an internal address.
+            if not await asyncio.to_thread(is_safe_public_url, media_url):
+                logger.warning("whatsapp adapter: blocked non-public media URL for %s", media_id[:8])
+                return None
             dl = await client.get(media_url, headers=headers)
             dl.raise_for_status()
             return dl.content

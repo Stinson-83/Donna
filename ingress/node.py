@@ -19,6 +19,7 @@ from sqlalchemy import select
 
 from db.models import ChatMessage
 from db.session import async_session
+from ingress.net_guard import is_safe_public_url
 
 logger = logging.getLogger(__name__)
 
@@ -65,9 +66,11 @@ async def _resolve_reply(user_id: str, platform_message_id: str) -> dict | None:
 
 
 async def _fetch_urls(urls: list[str]) -> list[dict]:
+    # follow_redirects is OFF: we only SSRF-validate the initial URL, so an
+    # auto-followed redirect could still land on an internal host.
     async with httpx.AsyncClient(
         timeout=_FETCH_TIMEOUT,
-        follow_redirects=True,
+        follow_redirects=False,
         headers={"User-Agent": "Mozilla/5.0 (compatible; DonnaBot/1.0)"},
     ) as client:
         tasks = [_fetch_one(client, url) for url in urls]
@@ -80,6 +83,9 @@ async def _fetch_one(client: httpx.AsyncClient, url: str) -> dict:
         domain = httpx.URL(url).host or ""
     except Exception:
         pass
+    if not await asyncio.to_thread(is_safe_public_url, url):
+        logger.warning("ingress: blocked non-public URL fetch %s", domain or url[:32])
+        return {"url": url, "domain": domain, "title": None, "text": None, "status": "blocked", "error": "url not allowed"}
     try:
         resp = await client.get(url)
         resp.raise_for_status()
