@@ -17,4 +17,7 @@ android/keystore.properties
 android/app/src/main/assets/public
 ios/App/App/public
 
-webapp/android/app/google-services.json
+# Firebase config — contains project keys, regenerated per-environment.
+# (paths in this file are relative to webapp/, so no leading "webapp/")
+android/app/google-services.json
+ios/App/App/GoogleService-Info.plist
