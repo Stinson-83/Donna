@@ -79,6 +79,7 @@ app.include_router(_cognition_router)
 
 _wa = WhatsAppChannel()
 _brief_refresh_task: asyncio.Task | None = None
+_bootstrap_task: asyncio.Task | None = None  # backgrounded DB/table bootstrap (keeps startup instant)
 
 
 # ── Per-phone pipeline coordination ──────────────────────────────────────────
@@ -301,23 +302,47 @@ async def _replay_queued_inbox() -> None:
             await _dispatch(payload, row.id)
 
 
+_STARTUP_STEP_TIMEOUT_S = float(os.environ.get("DONNA_STARTUP_STEP_TIMEOUT_S") or 25.0)
+
+
 @app.on_event("startup")
 async def _startup() -> None:
-    global _brief_refresh_task
-    try:
-        await create_tables()
-    except Exception:
-        logger.exception("startup: create_tables failed (DB not reachable?) — continuing")
-    try:
-        from backend.cognition.store import create_cognition_tables
+    """Return INSTANTLY so uvicorn emits 'Application startup complete' and the
+    Railway healthcheck on /health passes immediately. All DB / external
+    bootstrap (table creation, inbox replay) is deferred to a background task
+    with per-step timeouts, so a slow or unreachable database can never block
+    the server from coming up.
+    """
+    global _bootstrap_task
+    logger.info("STARTUP: handler entered — scheduling background bootstrap")
+    _bootstrap_task = asyncio.create_task(_bootstrap(), name="donna_bootstrap")
+    logger.info("STARTUP: complete (server is up; bootstrap runs in background)")
 
+
+async def _bootstrap() -> None:
+    """Best-effort, timeout-guarded bootstrap. Each step logs clearly so the
+    Railway logs reveal exactly which operation is slow/failing."""
+    global _brief_refresh_task
+
+    async def _step(name: str, coro) -> None:
+        logger.info("BOOTSTRAP %s: starting", name)
+        try:
+            await asyncio.wait_for(coro, timeout=_STARTUP_STEP_TIMEOUT_S)
+            logger.info("BOOTSTRAP %s: done", name)
+        except asyncio.TimeoutError:
+            logger.error("BOOTSTRAP %s: TIMED OUT after %.0fs — continuing", name, _STARTUP_STEP_TIMEOUT_S)
+        except Exception:
+            logger.exception("BOOTSTRAP %s: failed — continuing", name)
+
+    await _step("STEP 1/3 create_tables", create_tables())
+
+    async def _cog_tables():
+        from backend.cognition.store import create_cognition_tables
         await create_cognition_tables()
-    except Exception:
-        logger.exception("startup: create_cognition_tables failed — continuing")
-    try:
-        await _replay_queued_inbox()
-    except Exception:
-        logger.exception("startup: inbox replay failed — continuing")
+
+    await _step("STEP 2/3 create_cognition_tables", _cog_tables())
+    await _step("STEP 3/3 replay_queued_inbox", _replay_queued_inbox())
+
     if os.environ.get("DONNA_BRIEF_REFRESH") == "1":
         try:
             from backend.memory.jobs.temporal_refresh import run_forever as brief_run_forever
@@ -325,19 +350,14 @@ async def _startup() -> None:
             interval_s = float(os.environ.get("DONNA_BRIEF_REFRESH_INTERVAL_S") or 7200.0)
             active_days = int(os.environ.get("DONNA_BRIEF_REFRESH_ACTIVE_DAYS") or 14)
             _brief_refresh_task = asyncio.create_task(
-                brief_run_forever(
-                    poll_interval_s=interval_s,
-                    active_within_days=active_days,
-                ),
+                brief_run_forever(poll_interval_s=interval_s, active_within_days=active_days),
                 name="brief_refresh",
             )
-            logger.info(
-                "startup: brief refresh enabled (interval=%.0fs, active_within_days=%d)",
-                interval_s, active_days,
-            )
+            logger.info("BOOTSTRAP: brief refresh enabled (interval=%.0fs)", interval_s)
         except Exception:
-            logger.exception("startup: failed to start brief refresh")
-    logger.info("donna (claw-code) started")
+            logger.exception("BOOTSTRAP: failed to start brief refresh")
+
+    logger.info("BOOTSTRAP: donna fully started")
 
 
 @app.on_event("shutdown")
