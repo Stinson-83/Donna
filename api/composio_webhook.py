@@ -10,6 +10,7 @@ to avoid colliding with the event-type discriminator.
 """
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 
@@ -83,6 +84,49 @@ async def _ensure_user(user_id: str) -> None:
         logger.exception("composio_webhook: _ensure_user(%r) failed", user_id)
 
 
+async def _process_v3_gmail(user_id: str, data: dict) -> None:
+    """Background processor for a V3 Gmail event: dedupe → ingest → sync mark.
+
+    Dedupe FIRST: Svix redelivers on slow/failed acks, and the expensive part
+    (proactive surfacing → BRAIN turn) must run at most once per message. The
+    row insert is already idempotent; this guard makes the side-effects so.
+    """
+    from sqlalchemy import select
+
+    from db.models import EmailMessage
+    from db.session import async_session
+
+    gmail_id = str(data.get("message_id") or data.get("id") or "")
+    try:
+        if gmail_id:
+            async with async_session() as session:
+                seen = (
+                    await session.execute(
+                        select(EmailMessage.id)
+                        .where(EmailMessage.user_id == user_id)
+                        .where(EmailMessage.gmail_message_id == gmail_id)
+                    )
+                ).scalar_one_or_none()
+            if seen:
+                logger.info(
+                    "composio_webhook: duplicate delivery for gmail id=%s — skipping", gmail_id
+                )
+                return
+
+        msg = normalize_v3_gmail(data)
+        await ingest_gmail_message(user_id, msg)
+        await state.touch_synced(user_id, "google", "gmail")
+        logger.info(
+            "composio_webhook: ingested gmail id=%s from=%r subj=%r user=%s",
+            msg.gmail_message_id, msg.from_address, msg.subject, user_id,
+        )
+    except Exception:
+        logger.exception(
+            "composio_webhook: background gmail processing failed id=%s user=%s",
+            gmail_id, user_id,
+        )
+
+
 @router.post("/webhooks/composio")
 async def composio_webhook(
     request: Request,
@@ -147,14 +191,15 @@ async def composio_webhook(
         await _ensure_user(v3_user)
         try:
             if slug == TRIGGER_GMAIL_NEW_MESSAGE:
-                msg = normalize_v3_gmail(data)
-                await ingest_gmail_message(v3_user, msg)
-                await state.touch_synced(v3_user, "google", "gmail")
-                logger.info(
-                    "composio_webhook: ingested gmail id=%s from=%r subj=%r user=%s",
-                    msg.gmail_message_id, msg.from_address, msg.subject, v3_user,
+                # ACK immediately and process in the background. The full
+                # ingest can take 20s+ when proactive surfacing wakes the
+                # BRAIN; a slow response makes Svix retry, which previously
+                # caused duplicate deliveries and duplicate brain turns.
+                asyncio.create_task(
+                    _process_v3_gmail(v3_user, data),
+                    name=f"composio_gmail_{data.get('message_id') or 'unknown'}",
                 )
-                return {"ok": True}
+                return {"ok": True, "accepted": True}
             if slug in (TRIGGER_CALENDAR_EVENT_CREATED, TRIGGER_CALENDAR_EVENT_UPDATED):
                 await ingest_calendar_event(v3_user, data)
                 await state.touch_synced(v3_user, "google", "calendar")
