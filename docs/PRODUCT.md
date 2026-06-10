@@ -80,12 +80,20 @@ connect. A major differentiator.
 
 "Things Donna currently believes." A living list of evolving beliefs, each with
 a confidence score, the evidence it's built on, the memories it connects to, and
-when it was last strengthened. Confidence changes over time; evidence
-accumulates; beliefs evolve. Donna has a point of view — careful, not arrogant —
-and occasionally concludes ("this looks more like uncertainty than workload")
-rather than merely observing. Reasoning is made visible everywhere via a
-**"why this matters"** causal chain. (Signals are gone — they were implementation
-detail; observations now live as evidence inside beliefs.)
+when it was last strengthened. Confidence changes over time (shown as a live
+history sparkline); evidence accumulates; beliefs evolve. Each belief carries a
+**consequence** (the recommendation it changed), an expandable **"why i think
+this"** (evidence, counter-evidence, confidence history, strengthening event,
+reasoning), and an **"i changed my mind"** log of revisions.
+
+Donna also holds **open questions** — *"things i'm still figuring out"* — competing
+hypotheses with split evidence (e.g. *does stress come from reviews or lost
+sleep? evidence supports both, ~61%*). Questions graduate into beliefs when they
+resolve; beliefs fall back to questions when they stop holding. She speaks with
+calibrated uncertainty ("current hypothesis…", "i might be wrong, but…",
+"evidence is mixed") — thoughtful, not omniscient. A continuously learning
+system, not memory software. (Signals are gone — observations now live as
+evidence inside beliefs.)
 
 ---
 

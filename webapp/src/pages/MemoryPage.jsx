@@ -46,9 +46,12 @@ export default function MemoryPage() {
                   <span>·</span>
                   <span>via {m.source.toLowerCase()}</span>
                 </div>
-                {m.related?.length > 0 && (
-                  <div className="mt-2 text-[12px] lowercase text-soft/80">
-                    {m.related.join('   ·   ')}
+                {m.supports?.length > 0 && (
+                  <div className="mt-3">
+                    <span className="label">supports</span>
+                    <div className="mt-1 text-[13px] lowercase leading-snug text-ink/80">
+                      {m.supports.join('   ·   ')}
+                    </div>
                   </div>
                 )}
               </div>

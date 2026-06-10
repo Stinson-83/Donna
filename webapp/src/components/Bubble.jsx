@@ -50,6 +50,20 @@ export default function Bubble({ item, from, onQuickReply }) {
     )
   }
 
+  // Donna holding a question open — unresolved, soft accent (not rust).
+  if (item.type === 'open_question') {
+    return (
+      <div className="reveal mr-auto flex max-w-[88%] gap-3.5 py-1">
+        <span className="mt-1 w-px shrink-0 self-stretch" style={{ background: 'rgb(var(--soft))', opacity: 0.45 }} />
+        <div>
+          <div className="label">still figuring out</div>
+          <p className="mt-2.5 font-serif text-[18px] leading-snug text-ink">{item.question}</p>
+          <p className="mt-2 text-[13px] lowercase text-soft">{item.status}</p>
+        </div>
+      </div>
+    )
+  }
+
   // Donna's model of you, changing in real time.
   if (item.type === 'belief_update') {
     return (

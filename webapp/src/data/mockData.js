@@ -8,6 +8,12 @@ export const PLAN = {
   thesis: 'today is about the antler deck.',
   thesisCoda: 'everything else can wait.',
   because: ['the deck', 'review confidence', 'investor conversations', 'the raise'],
+  decision: {
+    considered: ['investor outreach', 'roadmap planning', 'hiring'],
+    chose: 'the antler deck',
+    because: 'it influences three upcoming decisions, and the others can wait a day.',
+  },
+  nudgeBelief: 'sleep predicts your stress better than workload',
   hero: {
     register: 'confrontation',
     title: 'the deck, final pass',
@@ -50,6 +56,7 @@ export const MEMORY_RECENT = [
     when: '2 days ago',
     source: 'WhatsApp',
     related: ['the antler SG batch', 'pitch nerves pattern'],
+    supports: ['you overprepare when uncertain', 'you avoid outreach when the story feels weak'],
   },
   {
     id: 'm2',
@@ -58,6 +65,7 @@ export const MEMORY_RECENT = [
     when: '1 week ago',
     source: 'Donna App',
     related: ['donna (project)', 'pricing debate'],
+    supports: ["you trust priya's judgement on pricing"],
   },
   {
     id: 'm3',
@@ -66,6 +74,7 @@ export const MEMORY_RECENT = [
     when: '2 weeks ago',
     source: 'Observed',
     related: ['pitch nerves pattern', 'health'],
+    supports: ['sleep predicts your stress better than workload'],
   },
   {
     id: 'm4',
@@ -74,6 +83,7 @@ export const MEMORY_RECENT = [
     when: '3 days ago',
     source: 'WhatsApp',
     related: ['luca (mentor)', 'open loops'],
+    supports: ['you avoid outreach when the story feels weak'],
   },
 ]
 
@@ -97,7 +107,8 @@ export const MEMORY_GRAPH = {
 }
 
 // What Donna currently believes is true — formed from observations over time.
-// Confidence evolves; evidence accumulates. This is the product.
+// Each belief carries a consequence (it changed a recommendation), an explainer
+// (why i think this), a confidence history, and the memories it rests on.
 export const BELIEFS = [
   {
     id: 'mornings',
@@ -106,7 +117,12 @@ export const BELIEFS = [
     up: true,
     strengthened: '2 days ago',
     statement: 'your best work happens before noon.',
-    basis: ['38 deep-work sessions', 'calendar history', 'focus patterns'],
+    consequence: 'i scheduled the deck rewrite into your 9–12 block, not the afternoon.',
+    evidence: ['38 deep-work sessions before noon', 'calendar history', 'focus patterns'],
+    counter: ['2 strong evening sessions during launch week'],
+    history: [64, 78, 85, 92],
+    strengthenedBy: 'another 3-hour morning focus block, zero context-switches.',
+    reasoning: 'output quality clusters before noon far more tightly than it does by total hours worked.',
     related: ['focus', 'mornings'],
   },
   {
@@ -116,7 +132,12 @@ export const BELIEFS = [
     up: true,
     strengthened: 'today',
     statement: 'sleep predicts your stress better than workload.',
-    basis: ['6 weeks of sleep logs', 'stress markers in chat'],
+    consequence: 'i prioritized sleep recovery in today’s plan and pushed the 11pm wind-down.',
+    evidence: ['6 weeks of sleep logs', 'stress markers in chat', '3 milestone weeks'],
+    counter: ['one calm week on 5h sleep'],
+    history: [71, 80, 84, 89],
+    strengthenedBy: 'stress rose ~40h after sleep dropped — again.',
+    reasoning: 'across milestones, low sleep precedes stress more reliably than high workload does.',
     related: ['sleep', 'stress', 'the review'],
     chain: ['sleep', 'stress', 'review performance'],
   },
@@ -125,7 +146,12 @@ export const BELIEFS = [
     confidence: 84,
     strengthened: '5 days ago',
     statement: "you overprepare when you're uncertain.",
-    basis: ['investor meetings', 'product launches', 'pitch reviews'],
+    consequence: 'i stopped suggesting more deck edits and pushed you toward the story instead.',
+    evidence: ['investor meetings', 'product launches', 'pitch reviews'],
+    counter: ['the seed deck you shipped in one pass'],
+    history: [70, 76, 82, 84],
+    strengthenedBy: 'a fourth deck rewrite before a review.',
+    reasoning: 'rework spikes when the underlying decision feels unresolved, not when stakes are simply high.',
     related: ['pitch nerves', 'antler'],
   },
   {
@@ -133,18 +159,70 @@ export const BELIEFS = [
     confidence: 81,
     strengthened: '1 week ago',
     statement: "you trust priya's judgement more than your own on pricing.",
-    basis: ['4 pricing debates', 'past decisions reversed'],
+    consequence: 'i flagged the pricing slide for priya before the review, not for you.',
+    evidence: ['4 pricing debates', 'past decisions reversed in her favor'],
+    counter: ['one pricing call you held against her'],
+    history: [68, 74, 79, 81],
+    strengthenedBy: 'you deferred to her on the enterprise tier last week.',
+    reasoning: 'on pricing specifically, your final calls track hers — not on product, where you lead.',
     related: ['priya', 'donna'],
   },
   {
     id: 'outreach',
-    confidence: 74,
+    confidence: 82,
     delta: '+1',
     up: true,
     strengthened: 'yesterday',
     statement: 'you avoid founder outreach when the story feels weak.',
-    basis: ['delayed intros', 'postponed investor emails'],
+    consequence: 'i held back the “send the investor email” nudge until the narrative is tighter.',
+    evidence: ['delayed intros', 'postponed investor emails', 'recruiting outreach gaps'],
+    counter: ['cold outreach you sent the week the demo landed'],
+    history: [71, 75, 79, 82],
+    strengthenedBy: 'the postponed antler email while the deck still felt off.',
+    reasoning: 'outreach stalls track narrative confidence, not your comfort with reaching out.',
     related: ['antler', 'the raise'],
+  },
+]
+
+// What Donna does NOT yet believe — competing hypotheses with split evidence.
+// When one resolves, it graduates into a belief. This is the learning frontier.
+export const OPEN_QUESTIONS = [
+  {
+    id: 'q1',
+    confidence: 61,
+    question: 'does your stress come from the reviews, or from the lost sleep?',
+    status: 'evidence supports both — they move together.',
+    leaning: 'leaning sleep, but i can\'t separate them yet.',
+  },
+  {
+    id: 'q2',
+    confidence: 58,
+    question: 'are the investor delays about outreach avoidance, or weak positioning?',
+    status: 'need more evidence.',
+    leaning: 'i suspect positioning. not sure.',
+  },
+  {
+    id: 'q3',
+    confidence: 54,
+    question: 'does priya improve your decision quality, or just your confidence?',
+    status: 'still uncertain.',
+    leaning: 'too early to call.',
+  },
+]
+
+// Beliefs Donna revised — proof she learns, not just stores.
+export const REVISIONS = [
+  {
+    id: 'outreach',
+    from: { statement: 'you dislike outreach', conf: 71 },
+    to: { statement: 'you avoid outreach when the narrative feels weak', conf: 82 },
+    why: 'found repeated evidence across fundraising and recruiting — the trigger is a weak story, not outreach itself.',
+  },
+  {
+    id: 'mornings',
+    from: { statement: "you're simply a morning person", conf: 64 },
+    to: { statement: 'your best work happens before noon', conf: 92 },
+    why: '38 deep-work sessions clustered before noon; it’s about output, not preference.',
   },
 ]
 

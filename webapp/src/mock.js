@@ -12,10 +12,10 @@ function scriptedReply(message) {
       { type: 'delay', seconds: 0.9 },
       {
         type: 'memory',
-        text: "before i answer, something stands out.\n\nthis is the fourth time you've questioned the market-size slide. i don't think the problem is the slide. i think you're uncertain about the story.",
+        text: "before i answer, something stands out.\n\ni might be wrong, but this is the fourth time you've raised the market-size slide. my current read: it's not the slide — it's that the story underneath it isn't settled yet.",
       },
       { type: 'thread', chain: ['the deck', 'the story', 'investor confidence'] },
-      { type: 'text', text: 'fix the story and the slide stops bothering you. want to work the opening?' },
+      { type: 'text', text: 'fix the story and the slide tends to stop bothering you. want to work the opening?' },
     ]
   }
   if (/(outreach|reach out|email|behind|avoid|procrastin|uncertain)/.test(m)) {
@@ -25,7 +25,7 @@ function scriptedReply(message) {
         type: 'pattern_notice',
         intro: '3 related events this week:',
         events: ['delayed outreach', 'rewrote the deck twice', 'postponed the investor email'],
-        explanation: 'this looks more like uncertainty about positioning than too much work.',
+        explanation: 'my best guess is uncertainty about positioning — though i don\'t have enough data to be sure.',
       },
       { type: 'text', text: 'name the positioning out loud and the rest tends to move. want to try it now?' },
     ]
@@ -35,10 +35,15 @@ function scriptedReply(message) {
       { type: 'delay', seconds: 0.9 },
       {
         type: 'memory',
-        text: 'i think i see it.\n\nyour sleep dropped before the stress did. this reads more like the review weighing on you than the workload.',
+        text: 'current hypothesis: your sleep dropped before the stress did, so this reads more like the review than the workload.\n\ni might be wrong, though — the two move together, so the evidence is mixed.',
       },
       { type: 'thread', chain: ['sleep', 'stress', 'the review'] },
-      { type: 'text', text: "protect tonight. 11pm. it's the highest-leverage thing you can do before the review." },
+      {
+        type: 'open_question',
+        question: 'is the stress from the reviews, or from the lost sleep?',
+        status: 'evidence supports both. leaning sleep, ~61%.',
+      },
+      { type: 'text', text: 'either way, protecting tonight helps. 11pm.' },
     ]
   }
   if (/(last time|you said|remember|before|3 weeks|recurring)/.test(m)) {
@@ -56,6 +61,17 @@ function scriptedReply(message) {
         reason: 'this is the fourth deck rewrite before a review.',
       },
       { type: 'text', text: "trust the story. you've done this before." },
+    ]
+  }
+
+  if (/(but |disagree|don't think|dont think|not the|it's fine|its fine|nah|no it)/.test(m)) {
+    return [
+      { type: 'delay', seconds: 0.8 },
+      {
+        type: 'memory',
+        text: "i hear you. but you've come back to the deck three times this week.\n\ni don't think it's the slide. i think the story underneath it isn't settled yet.",
+      },
+      { type: 'text', text: 'humor me — say the one sentence the whole deck is trying to prove.' },
     ]
   }
 

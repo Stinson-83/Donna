@@ -37,7 +37,21 @@ export default function PlanPage() {
 
       {/* ── Below the fold ── */}
       <section className="px-7 pb-28">
+        {/* how donna decided — she made a choice, not a list */}
         <Reveal delay={0}>
+          <div className="label mb-4">how i chose today</div>
+          <div className="text-[13px] lowercase text-soft">i considered</div>
+          <ul className="mt-1.5 space-y-1">
+            {p.decision.considered.map((c) => (
+              <li key={c} className="text-[15px] lowercase text-ink/80">— {c}</li>
+            ))}
+          </ul>
+          <div className="mt-4 text-[13px] lowercase text-soft">i chose</div>
+          <p className="mt-1 font-serif text-[22px] lowercase text-ink">{p.decision.chose}</p>
+          <p className="mt-2 text-[14px] leading-snug lowercase text-soft">because {p.decision.because}</p>
+        </Reveal>
+
+        <Reveal delay={0} className="mt-16">
           <div className="label mb-5">today's shape</div>
           <div className="space-y-7 border-l border-line pl-5">
             {p.calendar.map((e, i) => (
@@ -70,7 +84,12 @@ export default function PlanPage() {
           ))}
         </div>
 
-        <p className="mt-16 font-serif text-[22px] leading-snug text-ink/90">{p.nudge}</p>
+        <div className="mt-16">
+          <p className="font-serif text-[22px] leading-snug text-ink/90">{p.nudge}</p>
+          <p className="mt-2.5 text-[12px] lowercase tracking-wide text-soft">
+            from a belief&nbsp;&nbsp;·&nbsp;&nbsp;{p.nudgeBelief}
+          </p>
+        </div>
 
         <p className="mt-20 font-serif text-[20px] italic leading-relaxed text-soft">{p.whisper}</p>
       </section>
