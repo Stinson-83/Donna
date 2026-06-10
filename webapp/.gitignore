@@ -16,3 +16,5 @@ android/keystore.properties
 # Capacitor copies the web build into the native projects; don't track copies
 android/app/src/main/assets/public
 ios/App/App/public
+
+webapp/android/app/google-services.json
