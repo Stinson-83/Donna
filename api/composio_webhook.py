@@ -26,6 +26,7 @@ from backend.integrations.composio_client import (
     TRIGGER_CALENDAR_EVENT_UPDATED,
     TRIGGER_GMAIL_NEW_MESSAGE,
     ComposioClient,
+    normalize_v3_gmail,
     svix_debug,
     verify_svix_signature,
     verify_webhook_signature,
@@ -101,10 +102,45 @@ async def composio_webhook(
     event = payload.get("event") or payload.get("type")
     user_id = payload.get("user_id")
     logger.info("composio_webhook: event type received = %r (keys=%s)", event, sorted(payload.keys()))
-    # TEMP: dump the full V3 payload once so we can map it to ingestion (remove after).
-    logger.info("composio_webhook PAYLOAD DEBUG (temp): %s", json.dumps(payload)[:3000])
 
-    # Signed but not in a shape we map yet → ACK with 200 so Composio won't retry.
+    # ── Composio V3 trigger envelope ──────────────────────────────────────────
+    # type="composio.trigger.message"; the real trigger + user live in metadata,
+    # and the full record is inlined in `data` (no follow-up fetch needed).
+    if event == "composio.trigger.message":
+        meta = payload.get("metadata") or {}
+        slug = meta.get("trigger_slug") or ""
+        v3_user = meta.get("user_id")
+        data = payload.get("data") or {}
+        logger.info("composio_webhook: V3 trigger_slug=%r user=%r", slug, v3_user)
+        if not v3_user:
+            return {"ok": True, "unhandled": "v3 missing user_id"}
+        try:
+            if slug == TRIGGER_GMAIL_NEW_MESSAGE:
+                msg = normalize_v3_gmail(data)
+                await ingest_gmail_message(v3_user, msg)
+                await state.touch_synced(v3_user, "google", "gmail")
+                logger.info(
+                    "composio_webhook: ingested gmail id=%s from=%r subj=%r user=%s",
+                    msg.gmail_message_id, msg.from_address, msg.subject, v3_user,
+                )
+                return {"ok": True}
+            if slug in (TRIGGER_CALENDAR_EVENT_CREATED, TRIGGER_CALENDAR_EVENT_UPDATED):
+                await ingest_calendar_event(v3_user, data)
+                await state.touch_synced(v3_user, "google", "calendar")
+                return {"ok": True}
+            if slug == TRIGGER_CALENDAR_EVENT_DELETED:
+                ev_id = data.get("id") or data.get("event_id")
+                if ev_id:
+                    await delete_calendar_event(v3_user, ev_id)
+                return {"ok": True}
+        except Exception:
+            logger.exception("composio_webhook: V3 ingest failed slug=%s user=%s", slug, v3_user)
+            return {"ok": True, "error": "ingest_failed"}
+        logger.info("composio_webhook: unhandled V3 trigger_slug=%r", slug)
+        return {"ok": True, "unhandled": slug}
+    # ──────────────────────────────────────────────────────────────────────────
+
+    # Legacy Composio shapes below. Signed but unmapped → ACK 200 (no retry).
     if not event:
         return {"ok": True, "unhandled": True}
     if not user_id:

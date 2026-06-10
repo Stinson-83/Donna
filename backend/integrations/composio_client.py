@@ -129,6 +129,41 @@ def _normalize_gmail(raw: dict) -> NormalizedGmailMessage:
     )
 
 
+def normalize_v3_gmail(data: dict) -> NormalizedGmailMessage:
+    """Build a NormalizedGmailMessage from a Composio V3 GMAIL_NEW_GMAIL_MESSAGE
+    webhook `data` block. The message is fully inlined in the webhook payload
+    (message_text + payload.headers), so no follow-up fetch is needed."""
+    headers = {
+        (h.get("name") or "").lower(): h.get("value") or ""
+        for h in (data.get("payload") or {}).get("headers", [])
+    }
+    from_name, from_addr = _parse_address(headers.get("from", ""))
+    labels = list(data.get("label_ids") or [])
+    msg_id = str(data.get("message_id") or data.get("id") or "")
+    ts = str(data.get("message_timestamp") or "")
+    try:
+        internal_dt = datetime.fromisoformat(ts.replace("Z", "+00:00")).replace(tzinfo=None)
+    except Exception:
+        internal_dt = datetime.now(timezone.utc).replace(tzinfo=None)
+    body = data.get("message_text")
+    return NormalizedGmailMessage(
+        gmail_message_id=msg_id,
+        thread_id=str(data.get("thread_id") or msg_id),
+        from_address=from_addr,
+        from_name=from_name,
+        to_addresses=_split_addresses(headers.get("to", "")),
+        cc_addresses=_split_addresses(headers.get("cc", "")),
+        subject=headers.get("subject") or None,
+        snippet=(body or "")[:200] or None,
+        body_text=body,
+        labels=labels,
+        is_important="IMPORTANT" in labels,
+        is_starred="STARRED" in labels,
+        is_sent="SENT" in labels,
+        internal_date=internal_dt,
+    )
+
+
 def _composio():  # pragma: no cover - thin import site
     from composio import Composio
 
