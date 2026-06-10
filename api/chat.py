@@ -127,6 +127,16 @@ async def chat(req: ChatRequest) -> dict:
 
     await _save_message(state["user_id"], "user", state.get("raw_input") or "")
 
+    # Chat is an ingestion surface — every message can update Donna's model.
+    try:
+        from backend.cognition.pipeline import ingest as _cog_ingest
+        from backend.cognition.store import async_session as _cog_session
+        async with _cog_session() as cs:
+            await _cog_ingest(cs, user_id=state["user_id"], content=state.get("raw_input") or "", source_type="donna_app")
+            await cs.commit()
+    except Exception:
+        logger.exception("chat: cognition ingest failed (non-fatal)")
+
     try:
         state = await donna_turn(state)
     except Exception:

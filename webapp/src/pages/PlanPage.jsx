@@ -1,9 +1,11 @@
 import Reveal from '../components/Reveal.jsx'
 import CausalChain from '../components/CausalChain.jsx'
+import useRemote from '../components/useRemote.js'
+import { getPlan } from '../cognition.js'
 import { PLAN } from '../data/mockData.js'
 
 export default function PlanPage() {
-  const p = PLAN
+  const p = useRemote(getPlan, PLAN)
   const peak = p.calendar.find((e) => e.tone === 'peak') || p.calendar[p.calendar.length - 1]
 
   return (

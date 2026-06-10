@@ -72,6 +72,11 @@ from api.chat import router as _chat_router  # noqa: E402
 
 app.include_router(_chat_router)
 
+# Cognition layer — beliefs, questions, memory, graph, plan, reasoning APIs.
+from backend.cognition.api.routes import router as _cognition_router  # noqa: E402
+
+app.include_router(_cognition_router)
+
 _wa = WhatsAppChannel()
 _brief_refresh_task: asyncio.Task | None = None
 
@@ -303,6 +308,12 @@ async def _startup() -> None:
         await create_tables()
     except Exception:
         logger.exception("startup: create_tables failed (DB not reachable?) — continuing")
+    try:
+        from backend.cognition.store import create_cognition_tables
+
+        await create_cognition_tables()
+    except Exception:
+        logger.exception("startup: create_cognition_tables failed — continuing")
     try:
         await _replay_queued_inbox()
     except Exception:

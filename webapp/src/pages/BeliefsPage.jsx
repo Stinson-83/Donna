@@ -2,6 +2,8 @@ import { useState } from 'react'
 import Reveal from '../components/Reveal.jsx'
 import CausalChain from '../components/CausalChain.jsx'
 import Sparkline from '../components/Sparkline.jsx'
+import useRemote from '../components/useRemote.js'
+import { getBeliefs, getBeliefHistory, getQuestions } from '../cognition.js'
 import { BELIEFS, OPEN_QUESTIONS, REVISIONS } from '../data/mockData.js'
 
 function Field({ label, children }) {
@@ -36,6 +38,9 @@ function WhyIThinkThis({ b }) {
 
 export default function BeliefsPage() {
   const [open, setOpen] = useState(null)
+  const beliefs = useRemote(getBeliefs, BELIEFS)
+  const questions = useRemote(getQuestions, OPEN_QUESTIONS)
+  const revisions = useRemote(getBeliefHistory, REVISIONS)
 
   return (
     <div className="scroll flex h-full flex-col overflow-y-auto">
@@ -48,7 +53,7 @@ export default function BeliefsPage() {
         </Reveal>
 
         <div className="mt-14">
-          {BELIEFS.map((b, i) => {
+          {beliefs.map((b, i) => {
             const isOpen = open === b.id
             return (
               <Reveal key={b.id} delay={120 + i * 100}>
@@ -98,7 +103,7 @@ export default function BeliefsPage() {
           <h2 className="mt-3 font-serif text-[24px] lowercase text-ink">things i'm still figuring out</h2>
 
           <div className="mt-8 space-y-10">
-            {OPEN_QUESTIONS.map((q) => (
+            {questions.map((q) => (
               <div key={q.id}>
                 <span className="font-serif text-[34px] leading-none tabular-nums text-ink">{q.confidence}%</span>
                 <p className="mt-2.5 font-serif text-[22px] leading-snug text-ink">{q.question}</p>
@@ -120,7 +125,7 @@ export default function BeliefsPage() {
           <h2 className="mt-3 font-serif text-[24px] lowercase text-ink">i changed my mind</h2>
 
           <div className="mt-8 space-y-10">
-            {REVISIONS.map((r) => (
+            {revisions.map((r) => (
               <div key={r.id}>
                 <div className="label">i used to think</div>
                 <p className="mt-1.5 text-[17px] lowercase text-soft">

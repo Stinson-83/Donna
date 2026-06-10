@@ -1,5 +1,7 @@
 import Reveal from '../components/Reveal.jsx'
 import MemoryConstellation from '../components/MemoryConstellation.jsx'
+import useRemote from '../components/useRemote.js'
+import { getMemory } from '../cognition.js'
 import { MEMORY_RECENT, MEMORY_SECTIONS } from '../data/mockData.js'
 
 function Confidence({ level }) {
@@ -18,6 +20,7 @@ function Confidence({ level }) {
 }
 
 export default function MemoryPage() {
+  const recent = useRemote(getMemory, MEMORY_RECENT)
   return (
     <div className="scroll flex h-full flex-col overflow-y-auto">
       <div className="px-7 pb-28 pt-12">
@@ -35,7 +38,7 @@ export default function MemoryPage() {
         <Reveal delay={300} className="mt-10">
           <div className="label mb-6">recent</div>
           <div>
-            {MEMORY_RECENT.map((m, i) => (
+            {recent.map((m, i) => (
               <div key={m.id}>
                 {i > 0 && <div className="hairline my-7" />}
                 <p className="font-serif text-[20px] leading-snug text-ink">{m.summary}</p>
