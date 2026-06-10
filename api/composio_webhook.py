@@ -101,6 +101,8 @@ async def composio_webhook(
     event = payload.get("event") or payload.get("type")
     user_id = payload.get("user_id")
     logger.info("composio_webhook: event type received = %r (keys=%s)", event, sorted(payload.keys()))
+    # TEMP: dump the full V3 payload once so we can map it to ingestion (remove after).
+    logger.info("composio_webhook PAYLOAD DEBUG (temp): %s", json.dumps(payload)[:3000])
 
     # Signed but not in a shape we map yet → ACK with 200 so Composio won't retry.
     if not event:
