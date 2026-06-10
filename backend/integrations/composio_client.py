@@ -147,30 +147,71 @@ def verify_webhook_signature(body: bytes, sig_hex: str, secret: str) -> bool:
     return hmac.compare_digest(expected, sig_hex)
 
 
+def _svix_keys(secret: str) -> list[bytes]:
+    """Candidate HMAC keys from a Standard-Webhooks secret. The convention is
+    base64-decode of the `whsec_`-stripped value, but Composio/secret-storage
+    variations mean we try the raw form too."""
+    s = secret[len("whsec_"):] if secret.startswith("whsec_") else secret
+    keys: list[bytes] = []
+
+    def _add(b: bytes):
+        if b and b not in keys:
+            keys.append(b)
+
+    try:
+        _add(base64.b64decode(s))          # standard: base64-decoded stripped secret
+    except Exception:
+        pass
+    _add(s.encode())                        # raw stripped secret as key
+    if s != secret:                         # whsec_-prefixed: also try the full value
+        try:
+            _add(base64.b64decode(secret))
+        except Exception:
+            pass
+        _add(secret.encode())
+    return keys
+
+
+def _svix_expected(key: bytes, msg_id: str, timestamp: str, body: bytes) -> str:
+    signed = f"{msg_id}.{timestamp}.".encode() + body
+    return base64.b64encode(hmac.new(key, signed, hashlib.sha256).digest()).decode()
+
+
+def _svix_received(signature_header: str) -> list[str]:
+    # header: space-separated `v1,<base64sig>` entries
+    return [p.split(",", 1)[1] if "," in p else p for p in (signature_header or "").split()]
+
+
 def verify_svix_signature(
     secret: str, msg_id: str, timestamp: str, body: bytes, signature_header: str
 ) -> bool:
-    """Composio V3 / Svix ('Standard Webhooks') signature verification.
+    """Composio V3 / Svix ('Standard Webhooks') verification.
 
-    Signed content is `{webhook-id}.{webhook-timestamp}.{raw-body}`. The secret
-    is a base64 key (optionally `whsec_`-prefixed). The `webhook-signature`
-    header is space-separated `v1,<base64sig>` entries; any match passes.
-    Constant-time compare. Returns False on missing inputs.
+    signed = f"{webhook-id}.{webhook-timestamp}.{raw-body}";
+    sig = base64(HMAC_SHA256(key, signed)); compared (constant-time) against each
+    `v1,<sig>` in `webhook-signature`. Tries every valid key derivation.
     """
     if not (secret and msg_id and timestamp and signature_header):
         return False
-    raw = secret[len("whsec_"):] if secret.startswith("whsec_") else secret
-    try:
-        key = base64.b64decode(raw)
-    except Exception:
-        key = secret.encode()
-    signed = f"{msg_id}.{timestamp}.".encode() + body
-    expected = base64.b64encode(hmac.new(key, signed, hashlib.sha256).digest()).decode()
-    for part in signature_header.split():
-        sig = part.split(",", 1)[1] if "," in part else part
-        if hmac.compare_digest(expected, sig):
-            return True
+    received = _svix_received(signature_header)
+    for key in _svix_keys(secret):
+        expected = _svix_expected(key, msg_id, timestamp, body)
+        for sig in received:
+            if hmac.compare_digest(expected, sig):
+                return True
     return False
+
+
+def svix_debug(secret: str, msg_id: str, timestamp: str, body: bytes, signature_header: str) -> str:
+    """Non-secret debug: the received signatures vs. every computed candidate.
+    These are HMAC outputs (not the secret) — safe to log. Lets us see which
+    derivation (if any) Composio used."""
+    received = _svix_received(signature_header)
+    cands = [_svix_expected(k, msg_id, timestamp, body) for k in _svix_keys(secret)]
+    return (
+        f"id={msg_id} ts={timestamp} body_len={len(body)} "
+        f"received={received} computed_candidates={cands}"
+    )
 
 
 @dataclass(frozen=True)

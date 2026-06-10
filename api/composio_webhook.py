@@ -26,6 +26,7 @@ from backend.integrations.composio_client import (
     TRIGGER_CALENDAR_EVENT_UPDATED,
     TRIGGER_GMAIL_NEW_MESSAGE,
     ComposioClient,
+    svix_debug,
     verify_svix_signature,
     verify_webhook_signature,
 )
@@ -82,6 +83,12 @@ async def composio_webhook(
             "composio_webhook: signature invalid (scheme=%s, secret_set=%s, headers=%s)",
             scheme, bool(secret), sorted(request.headers.keys()),
         )
+        if scheme == "svix-v3":
+            # TEMP: log received vs computed signatures (HMACs, not the secret).
+            logger.warning(
+                "composio_webhook SVIX DEBUG: %s",
+                svix_debug(secret, webhook_id or "", webhook_timestamp or "", body, webhook_signature or ""),
+            )
         raise HTTPException(status_code=401, detail="bad signature")
     logger.info("composio_webhook: signature OK (scheme=%s)", scheme)
 
