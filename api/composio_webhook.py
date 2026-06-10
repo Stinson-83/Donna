@@ -59,8 +59,28 @@ async def composio_webhook(
 ) -> dict:
     body = await request.body()
     secret = settings.composio_webhook_secret or ""
-    if not verify_webhook_signature(body, x_composio_signature or "", secret):
+    sig = x_composio_signature or ""
+
+    # ── TEMP DIAGNOSTIC (remove after debugging the webhook) ──────────────────
+    # Never logs the secret itself — only whether it's set, the header state,
+    # all received header NAMES (to spot a differently-named signature header),
+    # and the precise verification failure reason.
+    logger.info(
+        "composio_webhook DIAG: secret_set=%s secret_len=%d x_composio_signature_present=%s sig_len=%d headers=%s",
+        bool(secret), len(secret), bool(sig), len(sig),
+        sorted(request.headers.keys()),
+    )
+    if not verify_webhook_signature(body, sig, secret):
+        if not secret:
+            reason = "COMPOSIO_WEBHOOK_SECRET is not set in the environment"
+        elif not sig:
+            reason = "no 'x-composio-signature' header received (Composio may use a different header name — see headers= above)"
+        else:
+            reason = "signature mismatch (secret differs, or Composio signs differently — e.g. sha256= prefix / different body encoding)"
+        logger.warning("composio_webhook DIAG: 401 — %s", reason)
         raise HTTPException(status_code=401, detail="bad signature")
+    logger.info("composio_webhook DIAG: signature OK")
+    # ── END TEMP DIAGNOSTIC ───────────────────────────────────────────────────
 
     try:
         payload = json.loads(body)
