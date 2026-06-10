@@ -10,4 +10,6 @@ sqlalchemy[asyncio]>=2.0
 asyncpg>=0.29
 beautifulsoup4>=4.12
 python-dotenv>=1.0
-composio-core>=0.5.0
+# New Composio SDK (v1). The code uses composio.toolkits/.tools/.triggers,
+# which is the `composio` package, NOT the old `composio-core`.
+composio>=1.0.0rc2

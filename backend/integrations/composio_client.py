@@ -147,6 +147,32 @@ def verify_webhook_signature(body: bytes, sig_hex: str, secret: str) -> bool:
     return hmac.compare_digest(expected, sig_hex)
 
 
+def verify_svix_signature(
+    secret: str, msg_id: str, timestamp: str, body: bytes, signature_header: str
+) -> bool:
+    """Composio V3 / Svix ('Standard Webhooks') signature verification.
+
+    Signed content is `{webhook-id}.{webhook-timestamp}.{raw-body}`. The secret
+    is a base64 key (optionally `whsec_`-prefixed). The `webhook-signature`
+    header is space-separated `v1,<base64sig>` entries; any match passes.
+    Constant-time compare. Returns False on missing inputs.
+    """
+    if not (secret and msg_id and timestamp and signature_header):
+        return False
+    raw = secret[len("whsec_"):] if secret.startswith("whsec_") else secret
+    try:
+        key = base64.b64decode(raw)
+    except Exception:
+        key = secret.encode()
+    signed = f"{msg_id}.{timestamp}.".encode() + body
+    expected = base64.b64encode(hmac.new(key, signed, hashlib.sha256).digest()).decode()
+    for part in signature_header.split():
+        sig = part.split(",", 1)[1] if "," in part else part
+        if hmac.compare_digest(expected, sig):
+            return True
+    return False
+
+
 @dataclass(frozen=True)
 class ComposioClient:
     """Stateless wrapper. SDK reads its key from env via Composio()."""
@@ -172,24 +198,28 @@ class ComposioClient:
         connection_id: str,
         trigger_names: Iterable[str],
     ) -> None:
-        """Subscribe Composio triggers for live webhook delivery.
+        """Create Composio triggers so events are delivered to the project
+        webhook. Composio v1 SDK: triggers.create(slug, user_id, trigger_config).
 
-        Idempotent: re-subscribing an active trigger is a no-op at Composio.
-        Failures are logged and swallowed — caller decides whether to retry.
+        Empty config uses the trigger's defaults (Gmail polls INBOX). The old
+        `triggers.subscribe(user_id=, connected_account_id=, trigger_name=)` call
+        did not exist in any SDK and silently failed.
         """
         composio = _composio()
         for name in trigger_names:
             try:
-                composio.triggers.subscribe(
+                trigger = composio.triggers.create(
+                    slug=name,
                     user_id=user_id,
-                    connected_account_id=connection_id,
-                    trigger_name=name,
+                    trigger_config={},
+                )
+                logger.info(
+                    "subscribe_triggers: created trigger=%s id=%s user=%s",
+                    name, getattr(trigger, "trigger_id", "?"), user_id,
                 )
             except Exception:
                 logger.exception(
-                    "subscribe_triggers: failed user=%s trigger=%s",
-                    user_id,
-                    name,
+                    "subscribe_triggers: failed user=%s trigger=%s", user_id, name
                 )
 
     async def fetch_gmail_message(

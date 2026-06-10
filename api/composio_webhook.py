@@ -26,6 +26,7 @@ from backend.integrations.composio_client import (
     TRIGGER_CALENDAR_EVENT_UPDATED,
     TRIGGER_GMAIL_NEW_MESSAGE,
     ComposioClient,
+    verify_svix_signature,
     verify_webhook_signature,
 )
 from backend.integrations.gmail_ingest import ingest_gmail_message
@@ -55,42 +56,51 @@ _PRODUCT_TRIGGERS = {
 @router.post("/webhooks/composio")
 async def composio_webhook(
     request: Request,
+    # Legacy Composio
     x_composio_signature: str | None = Header(default=None),
+    # Composio V3 (Svix / Standard Webhooks)
+    webhook_id: str | None = Header(default=None),
+    webhook_timestamp: str | None = Header(default=None),
+    webhook_signature: str | None = Header(default=None),
 ) -> dict:
     body = await request.body()
     secret = settings.composio_webhook_secret or ""
-    sig = x_composio_signature or ""
 
-    # ── TEMP DIAGNOSTIC (remove after debugging the webhook) ──────────────────
-    # Never logs the secret itself — only whether it's set, the header state,
-    # all received header NAMES (to spot a differently-named signature header),
-    # and the precise verification failure reason.
-    logger.info(
-        "composio_webhook DIAG: secret_set=%s secret_len=%d x_composio_signature_present=%s sig_len=%d headers=%s",
-        bool(secret), len(secret), bool(sig), len(sig),
-        sorted(request.headers.keys()),
-    )
-    if not verify_webhook_signature(body, sig, secret):
-        if not secret:
-            reason = "COMPOSIO_WEBHOOK_SECRET is not set in the environment"
-        elif not sig:
-            reason = "no 'x-composio-signature' header received (Composio may use a different header name — see headers= above)"
-        else:
-            reason = "signature mismatch (secret differs, or Composio signs differently — e.g. sha256= prefix / different body encoding)"
-        logger.warning("composio_webhook DIAG: 401 — %s", reason)
+    # Verify: Composio V3 (Svix) first, then legacy x-composio-signature.
+    if webhook_signature:
+        scheme = "svix-v3"
+        ok = verify_svix_signature(secret, webhook_id or "", webhook_timestamp or "", body, webhook_signature)
+    elif x_composio_signature:
+        scheme = "legacy"
+        ok = verify_webhook_signature(body, x_composio_signature, secret)
+    else:
+        scheme = "none"
+        ok = False
+
+    if not ok:
+        logger.warning(
+            "composio_webhook: signature invalid (scheme=%s, secret_set=%s, headers=%s)",
+            scheme, bool(secret), sorted(request.headers.keys()),
+        )
         raise HTTPException(status_code=401, detail="bad signature")
-    logger.info("composio_webhook DIAG: signature OK")
-    # ── END TEMP DIAGNOSTIC ───────────────────────────────────────────────────
+    logger.info("composio_webhook: signature OK (scheme=%s)", scheme)
 
     try:
         payload = json.loads(body)
     except json.JSONDecodeError:
         raise HTTPException(status_code=400, detail="bad json")
 
-    event = payload.get("event")
+    # V3 payloads use `type`; legacy used `event`.
+    event = payload.get("event") or payload.get("type")
     user_id = payload.get("user_id")
-    if not event or not user_id:
-        raise HTTPException(status_code=400, detail="missing fields")
+    logger.info("composio_webhook: event type received = %r (keys=%s)", event, sorted(payload.keys()))
+
+    # Signed but not in a shape we map yet → ACK with 200 so Composio won't retry.
+    if not event:
+        return {"ok": True, "unhandled": True}
+    if not user_id:
+        logger.info("composio_webhook: no top-level user_id for event=%r — acking", event)
+        return {"ok": True, "unhandled": "no user_id"}
 
     if event == "connection.complete":
         app = (payload.get("app") or "").upper()
