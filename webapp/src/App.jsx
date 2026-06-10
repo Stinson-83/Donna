@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { applyTheme, initNative } from './native.js'
 import PhoneFrame from './components/PhoneFrame.jsx'
 import TabBar from './components/TabBar.jsx'
 import Fab from './components/Fab.jsx'
@@ -14,6 +15,15 @@ export default function App() {
   // Donna notices the time of day. Evenings open in Night.
   const hour = new Date().getHours()
   const [night, setNight] = useState(hour >= 19 || hour < 6)
+
+  // Native: hide splash once mounted, keep the status bar in sync with theme.
+  useEffect(() => {
+    initNative(night)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+  useEffect(() => {
+    applyTheme(night)
+  }, [night])
 
   const Page = PAGES[tab]
 

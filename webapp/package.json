@@ -6,13 +6,33 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview --port 5173"
+    "build:mobile": "vite build --mode mobile",
+    "preview": "vite preview --port 5173",
+    "mobile:build": "npm run build:mobile && npx cap copy",
+    "mobile:sync": "npm run build:mobile && npx cap sync",
+    "android:open": "npx cap open android",
+    "android:run": "npm run mobile:sync && npx cap run android",
+    "android:apk": "npm run mobile:sync && cd android && ./gradlew assembleDebug",
+    "android:apk:release": "npm run mobile:sync && cd android && ./gradlew assembleRelease",
+    "ios:sync": "npm run mobile:sync && npx cap sync ios",
+    "ios:open": "npx cap open ios",
+    "assets": "npx capacitor-assets generate --iconBackgroundColor '#f6f2ec' --iconBackgroundColorDark '#0e0d0c' --splashBackgroundColor '#f6f2ec' --splashBackgroundColorDark '#0e0d0c'",
+    "release": "npm run mobile:sync && cd android && ./gradlew assembleRelease"
   },
   "dependencies": {
+    "@capacitor/android": "^8.4.0",
+    "@capacitor/app": "^8.1.0",
+    "@capacitor/cli": "^8.4.0",
+    "@capacitor/core": "^8.4.0",
+    "@capacitor/ios": "^8.4.0",
+    "@capacitor/keyboard": "^8.0.3",
+    "@capacitor/splash-screen": "^8.0.1",
+    "@capacitor/status-bar": "^8.0.2",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },
   "devDependencies": {
+    "@capacitor/assets": "^3.0.5",
     "@vitejs/plugin-react": "^4.3.4",
     "autoprefixer": "^10.4.20",
     "postcss": "^8.4.49",

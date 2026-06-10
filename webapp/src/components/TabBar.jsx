@@ -9,7 +9,7 @@ const TABS = [
 
 export default function TabBar({ tab, onChange }) {
   return (
-    <div className="z-20 flex items-stretch px-6 pb-3 pt-2.5">
+    <div className="safe-bottom safe-x z-20 flex items-stretch px-6 pb-3 pt-2.5">
       {TABS.map((t) => {
         const active = tab === t.key
         return (
