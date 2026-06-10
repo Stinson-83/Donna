@@ -55,6 +55,34 @@ _PRODUCT_TRIGGERS = {
 }
 
 
+async def _ensure_user(user_id: str) -> None:
+    """Create the Donna user row if it doesn't exist yet.
+
+    Composio events arrive keyed by the Composio entity id; email_messages has
+    an FK to users.id, so the first event for a new id must create the user.
+    Idempotent; concurrent-insert races are swallowed (the row exists either way).
+    """
+    from sqlalchemy import select
+
+    from db.models import User
+    from db.session import async_session
+
+    try:
+        async with async_session() as session:
+            existing = (
+                await session.execute(select(User.id).where(User.id == user_id))
+            ).scalar_one_or_none()
+            if existing:
+                return
+            session.add(User(id=user_id, phone=f"composio:{user_id}"))
+            await session.commit()
+            logger.info("composio_webhook: created user %r for incoming events", user_id)
+    except Exception:
+        # unique-violation race or transient DB error — ingest will surface
+        # anything real; don't fail the webhook here.
+        logger.exception("composio_webhook: _ensure_user(%r) failed", user_id)
+
+
 @router.post("/webhooks/composio")
 async def composio_webhook(
     request: Request,
@@ -114,6 +142,9 @@ async def composio_webhook(
         logger.info("composio_webhook: V3 trigger_slug=%r user=%r", slug, v3_user)
         if not v3_user:
             return {"ok": True, "unhandled": "v3 missing user_id"}
+        # The Composio user id may not exist as a Donna user yet (FK on
+        # email_messages.user_id) — create it on first event.
+        await _ensure_user(v3_user)
         try:
             if slug == TRIGGER_GMAIL_NEW_MESSAGE:
                 msg = normalize_v3_gmail(data)
