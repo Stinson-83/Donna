@@ -38,6 +38,17 @@ from config import settings
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
+# Strong references to in-flight background tasks. asyncio only keeps weak
+# refs to tasks — without this, a processing task can be garbage-collected
+# mid-flight and silently never finish.
+_bg_tasks: set[asyncio.Task] = set()
+
+
+def _spawn(coro, name: str) -> None:
+    task = asyncio.create_task(coro, name=name)
+    _bg_tasks.add(task)
+    task.add_done_callback(_bg_tasks.discard)
+
 
 _APP_TO_PRODUCT = {
     "GMAIL": "gmail",
@@ -195,7 +206,7 @@ async def composio_webhook(
                 # ingest can take 20s+ when proactive surfacing wakes the
                 # BRAIN; a slow response makes Svix retry, which previously
                 # caused duplicate deliveries and duplicate brain turns.
-                asyncio.create_task(
+                _spawn(
                     _process_v3_gmail(v3_user, data),
                     name=f"composio_gmail_{data.get('message_id') or 'unknown'}",
                 )
