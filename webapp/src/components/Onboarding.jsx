@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { claimProfile, useDemo } from '../identity.js'
-import { connectAccount, runOnboarding } from '../cards.js'
+import { connectAccount, runOnboarding, setNotifyChannel } from '../cards.js'
 
 // First-run gate. Step 1: claim a profile (or explore the demo). Step 2: connect
 // Google so Donna can backfill the calendar + key relationships on day one.
@@ -74,8 +74,15 @@ export default function Onboarding({ onDone }) {
   )
 }
 
+const CHANNELS = [
+  { key: 'auto', label: 'Either' },
+  { key: 'app', label: 'App' },
+  { key: 'whatsapp', label: 'WhatsApp' },
+]
+
 function ConnectStep({ name, onDone }) {
   const [state, setState] = useState('idle') // idle | connecting | connected | running
+  const [channel, setChannel] = useState('auto')
 
   async function connect() {
     setState('connecting')
@@ -90,6 +97,11 @@ function ConnectStep({ name, onDone }) {
 
   async function finish(backfill) {
     setState('running')
+    try {
+      await setNotifyChannel(channel)
+    } catch {
+      /* non-fatal */
+    }
     try {
       if (backfill) await runOnboarding()
     } catch {
@@ -130,6 +142,25 @@ function ConnectStep({ name, onDone }) {
             {state === 'running' ? 'reading your calendar…' : "i've connected"}
           </button>
         )}
+      </div>
+
+      {/* how should she reach you */}
+      <div className="reveal mt-7" style={{ animationDelay: '200ms' }}>
+        <div className="label mb-2.5">reach me on</div>
+        <div className="flex gap-2">
+          {CHANNELS.map((c) => (
+            <button
+              key={c.key}
+              type="button"
+              onClick={() => setChannel(c.key)}
+              className={`flex-1 rounded-full border py-2 text-[13.5px] transition ${
+                channel === c.key ? 'border-rust bg-rust/10 font-semibold text-rust' : 'border-line text-soft'
+              }`}
+            >
+              {c.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       <button

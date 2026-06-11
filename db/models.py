@@ -55,6 +55,7 @@ class User(Base):
     has_google: Mapped[bool] = mapped_column(Boolean, default=False)
     has_github: Mapped[bool] = mapped_column(Boolean, default=False)
     is_sandbox: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False, index=True)
+    notify_channel: Mapped[str] = mapped_column(String, nullable=False, default="auto")  # auto | app | whatsapp
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
     last_active_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 

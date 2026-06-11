@@ -147,3 +147,22 @@ export async function getOnboardingStatus(user = getUserId()) {
   if (!res.ok) throw new Error(`status failed: ${res.status}`)
   return res.json()
 }
+
+// Which surface Donna reaches you on: 'auto' | 'app' | 'whatsapp'.
+export async function getSettings(user = getUserId()) {
+  if (MOCK) return { notify_channel: 'auto' }
+  const res = await fetch(`${API_BASE}/settings?user=${encodeURIComponent(user)}`)
+  if (!res.ok) throw new Error(`settings failed: ${res.status}`)
+  return res.json()
+}
+
+export async function setNotifyChannel(channel, user = getUserId()) {
+  if (MOCK) return { notify_channel: channel }
+  const res = await fetch(`${API_BASE}/settings`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ user, notify_channel: channel }),
+  })
+  if (!res.ok) throw new Error(`settings failed: ${res.status}`)
+  return res.json()
+}

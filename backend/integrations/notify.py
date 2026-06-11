@@ -32,26 +32,34 @@ async def deliver_proactive(user_id: str, outbound: list, *, title: str = "donna
         )).scalar_one_or_none() is not None
         user = (await s.execute(select(User).where(User.id == user_id))).scalar_one_or_none()
 
-    # Prefer the app when it's installed — one push, deep-linking into the card.
-    if has_app:
-        try:
-            from backend.integrations.push import notify_outbound
-
-            await notify_outbound(user_id, outbound, title=title)
-            return "app"
-        except Exception:
-            logger.exception("deliver_proactive: app push failed user=%s", user_id[:8])
-
-    # No app (or push failed) -> WhatsApp, but only for a real E.164 number
-    # (composio:/web-demo identities are not WhatsApp-reachable).
     phone = (user.phone if user else "") or ""
-    if phone.startswith("+"):
-        try:
-            from delivery.whatsapp import WhatsAppChannel
+    real_phone = phone.startswith("+")  # composio:/web-demo are not WhatsApp-reachable
+    channel = ((user.notify_channel if user else None) or "auto").lower()
 
-            await WhatsAppChannel().send_many(phone, outbound)
-            return "whatsapp"
-        except Exception:
-            logger.exception("deliver_proactive: whatsapp send failed user=%s", user_id[:8])
+    # The user's preferred channel sets the order; the other is a fallback.
+    if channel == "whatsapp":
+        order = ("whatsapp", "app")
+    elif channel == "app":
+        order = ("app", "whatsapp")
+    else:  # auto — app when installed, else WhatsApp
+        order = ("app", "whatsapp") if has_app else ("whatsapp", "app")
+
+    for surface in order:
+        if surface == "app" and has_app:
+            try:
+                from backend.integrations.push import notify_outbound
+
+                await notify_outbound(user_id, outbound, title=title)
+                return "app"
+            except Exception:
+                logger.exception("deliver_proactive: app push failed user=%s", user_id[:8])
+        elif surface == "whatsapp" and real_phone:
+            try:
+                from delivery.whatsapp import WhatsAppChannel
+
+                await WhatsAppChannel().send_many(phone, outbound)
+                return "whatsapp"
+            except Exception:
+                logger.exception("deliver_proactive: whatsapp send failed user=%s", user_id[:8])
 
     return "none"

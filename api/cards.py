@@ -153,3 +153,44 @@ async def history(user: str, limit: int = 80) -> dict:
             "proactive": bool(r.is_proactive),
         } for r in rows],
     }
+
+
+_CHANNELS = {"auto", "app", "whatsapp"}
+
+
+class SettingsBody(BaseModel):
+    user: str
+    notify_channel: str
+
+
+@router.get("/settings")
+async def get_settings(user: str) -> dict:
+    """The user's preferences. notify_channel: which surface Donna reaches you on."""
+    from sqlalchemy import select
+
+    from api.push import resolve_user_id
+    from db.models import User
+    from db.session import async_session
+
+    user_id = await resolve_user_id(user)
+    async with async_session() as s:
+        u = (await s.execute(select(User).where(User.id == user_id))).scalar_one_or_none()
+    return {"user_id": user_id, "notify_channel": (u.notify_channel if u else "auto") or "auto"}
+
+
+@router.post("/settings")
+async def set_settings(body: SettingsBody) -> dict:
+    from sqlalchemy import select
+
+    from api.push import resolve_user_id
+    from db.models import User
+    from db.session import async_session
+
+    channel = body.notify_channel if body.notify_channel in _CHANNELS else "auto"
+    user_id = await resolve_user_id(body.user)
+    async with async_session() as s:
+        u = (await s.execute(select(User).where(User.id == user_id))).scalar_one_or_none()
+        if u is not None:
+            u.notify_channel = channel
+            await s.commit()
+    return {"user_id": user_id, "notify_channel": channel}
