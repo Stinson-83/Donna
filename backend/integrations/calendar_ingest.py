@@ -50,6 +50,8 @@ async def ingest_calendar_event(user_id: str, event: dict[str, Any]) -> None:
     if start_time is None:
         return
 
+    old_start: datetime | None = None
+    entry_id: str | None = None
     async with _session_factory()() as session:
         existing = (
             await session.execute(
@@ -71,12 +73,26 @@ async def ingest_calendar_event(user_id: str, event: dict[str, Any]) -> None:
                 )
             )
         else:
+            old_start = existing.start_time
+            entry_id = existing.id
             existing.title = title
             existing.start_time = start_time
             existing.end_time = end_time
             existing.location = location
 
         await session.commit()
+
+    # Cross-connection (Cap 17): an existing event whose time moved triggers a
+    # consequence walk. New events and unchanged times don't (so a backfill is
+    # silent). The trigger itself no-ops unless the shift is material AND links
+    # to something, so a guard here just avoids the import on the common path.
+    if entry_id is not None and old_start is not None and old_start != start_time:
+        try:
+            from backend.proactive.cross_connect import maybe_surface_event_shift
+
+            await maybe_surface_event_shift(user_id, entry_id, old_start, start_time)
+        except Exception:
+            logger.exception("calendar: cross-connect trigger failed user=%s", user_id[:8])
 
 
 async def delete_calendar_event(user_id: str, google_event_id: str) -> None:
