@@ -32,9 +32,9 @@ async def _run_proactive(user_id: str, prompt: str) -> None:
     outbound = (result or state).get("_outbound") or []
     if outbound:
         try:
-            from backend.integrations.push import notify_outbound
+            from backend.integrations.notify import deliver_proactive
 
-            await notify_outbound(user_id, outbound)
+            await deliver_proactive(user_id, outbound)
         except Exception:
             logger.exception("proactive: push failed user=%s", user_id[:8])
 

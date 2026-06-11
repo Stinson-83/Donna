@@ -294,9 +294,9 @@ async def _surface_watch(watch, prompt: str) -> None:
     outbound = (result or state).get("_outbound") or []
     if outbound:
         try:
-            from backend.integrations.push import notify_outbound
+            from backend.integrations.notify import deliver_proactive
 
-            await notify_outbound(watch.user_id, outbound)
+            await deliver_proactive(watch.user_id, outbound)
         except Exception:
             logger.exception("watch surface: push failed user=%s", watch.user_id[:8])
 

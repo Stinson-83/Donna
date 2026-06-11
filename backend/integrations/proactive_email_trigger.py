@@ -149,10 +149,10 @@ async def maybe_surface_email(
         outbound = (result or state).get("_outbound") or []
         if outbound:
             try:
-                from backend.integrations.push import notify_outbound
-                await notify_outbound(user_id, outbound)
+                from backend.integrations.notify import deliver_proactive
+                await deliver_proactive(user_id, outbound)
             except Exception:
-                logger.exception("proactive_email: push notify failed user=%s", user_id)
+                logger.exception("proactive_email: deliver failed user=%s", user_id)
     except Exception:
         logger.exception(
             "proactive_email: brain invocation failed user=%s msg=%s",

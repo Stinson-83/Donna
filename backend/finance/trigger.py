@@ -122,9 +122,9 @@ async def maybe_surface_finance(user_id: str) -> None:
         outbound = (result or state).get("_outbound") or []
         if outbound:
             try:
-                from backend.integrations.push import notify_outbound
+                from backend.integrations.notify import deliver_proactive
 
-                await notify_outbound(user_id, outbound)
+                await deliver_proactive(user_id, outbound)
             except Exception:
                 logger.exception("proactive_finance: push notify failed user=%s", user_id)
     except Exception:
