@@ -85,6 +85,23 @@ export async function getWatches(user = getUserId()) {
   return res.json()
 }
 
+const MOCK_TODAY = {
+  date: 'Thu 11 Jun',
+  holding: 23,
+  calendar: [
+    { time: '10:00', title: 'CS2040S grading', note: '' },
+    { time: '3:00', title: 'Demo with Raghav', note: 'he confirmed at 2:30 · link ready' },
+    { time: '8:45', title: 'Pickup · Aniroodh, Changi T3', note: 'pending your approval above' },
+  ],
+}
+
+export async function getToday(user = getUserId()) {
+  if (MOCK) return MOCK_TODAY
+  const res = await fetch(`${API_BASE}/today?user=${encodeURIComponent(user)}`)
+  if (!res.ok) throw new Error(`today failed: ${res.status}`)
+  return res.json()
+}
+
 export async function runOnboarding(user = getUserId()) {
   if (MOCK) return { status: 'complete', events: 0, relationships: 0 }
   const res = await fetch(`${API_BASE}/onboarding/run`, {

@@ -82,3 +82,41 @@ async def card_action(body: CardActionBody) -> dict:
         "messages": messages,
         "cards": await _active_cards(user_id),
     }
+
+
+@router.get("/today")
+async def today(user: str) -> dict:
+    """The Today/Dashboard meta: next-24h calendar (the day rail) + the 'holding'
+    count (active watches + pending cards + open loops)."""
+    from datetime import timedelta
+
+    from sqlalchemy import func, select
+
+    from api.push import resolve_user_id
+    from db.models import CalendarEntry, Card, OpenLoop, Watch, utcnow
+    from db.session import async_session
+
+    user_id = await resolve_user_id(user)
+    now = utcnow()
+
+    def _t(dt):
+        return dt.strftime("%I:%M").lstrip("0")
+
+    async with async_session() as s:
+        cal = (await s.execute(
+            select(CalendarEntry).where(
+                CalendarEntry.user_id == user_id,
+                CalendarEntry.start_time >= now,
+                CalendarEntry.start_time <= now + timedelta(hours=24),
+            ).order_by(CalendarEntry.start_time).limit(12)
+        )).scalars().all()
+        n_watch = (await s.execute(select(func.count(Watch.id)).where(Watch.user_id == user_id, Watch.status == "active"))).scalar_one()
+        n_card = (await s.execute(select(func.count(Card.id)).where(Card.user_id == user_id, Card.state == "pending"))).scalar_one()
+        n_loop = (await s.execute(select(func.count(OpenLoop.id)).where(OpenLoop.user_id == user_id, OpenLoop.status == "active"))).scalar_one()
+
+    return {
+        "user_id": user_id,
+        "date": now.strftime("%a %d %b"),
+        "calendar": [{"time": _t(c.start_time), "title": c.title, "note": c.location or ""} for c in cal],
+        "holding": int(n_watch or 0) + int(n_card or 0) + int(n_loop or 0),
+    }
