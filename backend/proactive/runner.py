@@ -37,8 +37,15 @@ def default_checks() -> list[ProactiveCheck]:
         maybe_surface_birthday,
         maybe_watch_interests,
     )
+    from backend.proactive.prepare import maybe_prepare_upcoming
 
-    return [maybe_surface_finance, maybe_checkin_meal, maybe_surface_birthday, maybe_watch_interests]
+    return [
+        maybe_surface_finance,
+        maybe_prepare_upcoming,
+        maybe_checkin_meal,
+        maybe_surface_birthday,
+        maybe_watch_interests,
+    ]
 
 
 async def _active_user_ids() -> list[str]:
