@@ -1,0 +1,97 @@
+// Cards + watches API client. Mirrors api.js conventions: API_BASE, the `?user=`
+// param, and a MOCK fallback so `npm run dev` shows the surface with no backend.
+import { API_BASE, MOCK } from './api.js'
+import { getUserId } from './identity.js'
+
+// ── MOCK fixtures (same shape as the real endpoints) ─────────────────────
+const MOCK_CARDS = [
+  {
+    version: 1,
+    card_id: 'c_m2_sequoia',
+    intent: 'heads_up',
+    theme: 'dark',
+    blocks: [
+      { type: 'header', label: 'needs your eye', ref: 'Sequoia · term sheet' },
+      { type: 'body', text: 'sequoia replied to your thread. they want an answer by **EOD**, and the term sheet expires **tomorrow noon**.' },
+      { type: 'key_values', rows: [{ k: 'From', v: 'partner @ sequoia' }, { k: 'Thread', v: 'Series A term sheet' }] },
+      { type: 'actions', actions: [
+        { label: 'Draft a reply', action_id: 'a_draft_reply_sequoia', style: 'primary' },
+        { label: 'Not now', action_id: 'a_dismiss', style: 'secondary' },
+      ] },
+      { type: 'footer', text: 'flagged from gmail · 8:42 AM', right: 'gmail' },
+    ],
+  },
+  {
+    version: 1,
+    card_id: 'c_aws',
+    intent: 'approval',
+    theme: 'dark',
+    blocks: [
+      { type: 'header', label: 'needs your approval', ref: 'HDFC · auto-pay' },
+      { type: 'body', text: 'aws **47,200** auto-debits in 4 days, your current is **4,200** short.' },
+      { type: 'delta', from: '43,000', to: '48,000', from_caption: 'now', to_caption: 'after', kind: 'money' },
+      { type: 'actions', actions: [
+        { label: 'Transfer 5,000', action_id: 'a_transfer', style: 'primary' },
+        { label: 'Not now', action_id: 'a_dismiss', style: 'secondary' },
+      ] },
+      { type: 'footer', text: "won't move anything until you tap" },
+    ],
+  },
+  {
+    version: 1,
+    card_id: 'c_flight',
+    intent: 'tracker',
+    theme: 'light',
+    blocks: [
+      { type: 'header', label: 'tracking', ref: 'checked hourly' },
+      { type: 'body', text: 'SIN → YYZ · one-way, Aug 28 · for the waterloo move' },
+      { type: 'graph', points: [930, 921, 905, 896, 888, 871, 864, 851, 843, 836, 829, 818], target: 780, current_label: 'S$818', target_label: 'buy under S$780' },
+      { type: 'footer', text: '30 days · dashed line is your target', right: "she'll buy when it crosses" },
+    ],
+  },
+]
+
+const MOCK_WATCHES = [
+  { id: 'w1', type: 'reply', title: 'sequoia partner reply', subject: 'sequoia', importance: 90, deadline: null },
+  { id: 'w2', type: 'web', title: 'tokyo flights below ₹38k', subject: 'tokyo flight prices', importance: 70, deadline: null },
+  { id: 'w3', type: 'web', title: 'poke launch updates', subject: 'poke launch', importance: 50, deadline: null },
+]
+
+// ── API ──────────────────────────────────────────────────────────────────
+export async function getCards(user = getUserId()) {
+  if (MOCK) return { cards: MOCK_CARDS }
+  const res = await fetch(`${API_BASE}/cards?user=${encodeURIComponent(user)}`)
+  if (!res.ok) throw new Error(`cards failed: ${res.status}`)
+  return res.json()
+}
+
+export async function actCard(cardId, actionId, user = getUserId()) {
+  if (MOCK) {
+    return { status: 'ok', cards: MOCK_CARDS.filter((c) => c.card_id !== cardId) }
+  }
+  const res = await fetch(`${API_BASE}/cards/action`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ user, card_id: cardId, action_id: actionId }),
+  })
+  if (!res.ok) throw new Error(`card action failed: ${res.status}`)
+  return res.json()
+}
+
+export async function getWatches(user = getUserId()) {
+  if (MOCK) return { watching: MOCK_WATCHES }
+  const res = await fetch(`${API_BASE}/watches?user=${encodeURIComponent(user)}`)
+  if (!res.ok) throw new Error(`watches failed: ${res.status}`)
+  return res.json()
+}
+
+export async function runOnboarding(user = getUserId()) {
+  if (MOCK) return { status: 'complete', events: 0, relationships: 0 }
+  const res = await fetch(`${API_BASE}/onboarding/run`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ user }),
+  })
+  if (!res.ok) throw new Error(`onboarding failed: ${res.status}`)
+  return res.json()
+}
