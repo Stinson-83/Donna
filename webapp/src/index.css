@@ -5,22 +5,41 @@
 /* ── Palette — Morning (default) / Night ─────────────────────────────────── */
 /* Colors as RGB channel triplets so Tailwind alpha modifiers (text-ink/80) and
    rgb(var(--x)) inline usage both work. */
+/* Design-spec tokens (donna-design-spec/tokens). Paper-warm light design with
+   intrinsically-themed cards (espresso/cream). RGB triplets so Tailwind alpha
+   modifiers + rgb(var(--x)) both work; design-spec card colors are hex vars. */
 :root {
-  --bg: 246 242 236;
-  --surface: 255 253 249;
-  --ink: 25 24 22;
-  --soft: 138 127 118;
-  --rust: 180 91 56;
-  --line: 232 222 212;
+  --bg: 246 241 234;       /* #F6F1EA paper */
+  --bg-deep: 239 232 223;  /* #EFE8DF */
+  --surface: 255 255 255;  /* #FFFFFF */
+  --surface-warm: 253 249 245; /* #FDF9F5 */
+  --ink: 32 26 20;         /* #201A14 */
+  --soft: 111 102 92;      /* #6F665C ink-60 */
+  --faint: 165 155 143;    /* #A59B8F ink-40 */
+  --rust: 123 85 68;       /* #7B5544 accent (kept as --rust for existing classes) */
+  --accent: 123 85 68;
+  --line: 227 219 209;     /* subtle warm hairline on paper */
+  /* card / component colors (hex) */
+  --espresso: #251D16;
+  --espresso-light: #3A2C20;
+  --espresso-deep: #1B140E;
+  --cream: #F3EBE1;
+  --copper: #C99A7E;
+  --green: #3D7A4E;
+  --amber: #B07A3E;
   color-scheme: light;
 }
 .night {
-  --bg: 14 13 12;
-  --surface: 23 21 19;
-  --ink: 238 232 225;
-  --soft: 167 157 148;
-  --rust: 208 106 69;
-  --line: 41 36 33;
+  --bg: 22 18 14;
+  --bg-deep: 16 13 10;
+  --surface: 36 29 22;
+  --surface-warm: 36 29 22;
+  --ink: 243 235 225;      /* cream */
+  --soft: 168 156 142;
+  --faint: 130 120 108;
+  --rust: 201 154 126;     /* copper as accent on dark */
+  --accent: 201 154 126;
+  --line: 60 50 40;
   color-scheme: dark;
 }
 
@@ -31,8 +50,8 @@ body,
 }
 body {
   margin: 0;
-  background: #d9cdba;
-  font-family: 'Inter', system-ui, sans-serif;
+  background: #d8cfc4;
+  font-family: 'Red Hat Text', -apple-system, system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
   /* native feel: no pull-to-refresh / rubber-band on the document */
@@ -42,7 +61,7 @@ html {
   overscroll-behavior: none;
 }
 .night body {
-  background: #050505;
+  background: #19120c;
 }
 
 /* ── Safe areas (notch / status bar / gesture nav). Insets are 0 on the web,

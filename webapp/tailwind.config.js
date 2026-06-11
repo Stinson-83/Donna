@@ -6,15 +6,24 @@ export default {
     extend: {
       colors: {
         bg: 'rgb(var(--bg) / <alpha-value>)',
+        'bg-deep': 'rgb(var(--bg-deep) / <alpha-value>)',
         surface: 'rgb(var(--surface) / <alpha-value>)',
+        'surface-warm': 'rgb(var(--surface-warm) / <alpha-value>)',
         ink: 'rgb(var(--ink) / <alpha-value>)',
         soft: 'rgb(var(--soft) / <alpha-value>)',
+        faint: 'rgb(var(--faint) / <alpha-value>)',
         rust: 'rgb(var(--rust) / <alpha-value>)',
+        accent: 'rgb(var(--accent) / <alpha-value>)',
         line: 'rgb(var(--line) / <alpha-value>)',
+        espresso: '#251D16',
+        cream: '#F3EBE1',
+        copper: '#C99A7E',
+        green: '#3D7A4E',
+        amber: '#B07A3E',
       },
       fontFamily: {
-        serif: ['"Instrument Serif"', 'Georgia', 'serif'],
-        sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+        serif: ['"EB Garamond"', 'Georgia', 'serif'],
+        sans: ['"Red Hat Text"', '-apple-system', 'system-ui', 'sans-serif'],
       },
       letterSpacing: {
         label: '0.16em',
