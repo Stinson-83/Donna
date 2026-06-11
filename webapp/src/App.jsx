@@ -7,12 +7,12 @@ import Fab from './components/Fab.jsx'
 import Capture from './components/Capture.jsx'
 import Onboarding from './components/Onboarding.jsx'
 import TodayPage from './pages/TodayPage.jsx'
-import ChatPage from './pages/ChatPage.jsx'
+import LivePage from './pages/LivePage.jsx'
 import BeliefsPage from './pages/BeliefsPage.jsx'
 import MemoryPage from './pages/MemoryPage.jsx'
 import { hasIdentity, getUserId } from './identity.js'
 
-const PAGES = { plan: TodayPage, chat: ChatPage, beliefs: BeliefsPage, memory: MemoryPage }
+const PAGES = { plan: TodayPage, chat: LivePage, beliefs: BeliefsPage, memory: MemoryPage }
 
 export default function App() {
   const [tab, setTab] = useState('plan')
