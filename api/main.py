@@ -82,6 +82,11 @@ from api.push import router as _push_router  # noqa: E402
 
 app.include_router(_push_router)
 
+# Cards — app surface: list active cards + resolve taps (same resolver as WhatsApp).
+from api.cards import router as _cards_router  # noqa: E402
+
+app.include_router(_cards_router)
+
 _wa = WhatsAppChannel()
 _brief_refresh_task: asyncio.Task | None = None
 _bootstrap_task: asyncio.Task | None = None  # backgrounded DB/table bootstrap (keeps startup instant)

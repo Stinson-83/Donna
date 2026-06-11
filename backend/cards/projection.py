@@ -44,6 +44,18 @@ def fallback_text_from_raw(payload: dict) -> str:
     return ""
 
 
+def card_to_app(payload: dict, state: str) -> dict:
+    """App surface = the design's "Live (full)" projection: the DonnaCard renders
+    natively, block for block. Return the stored payload, with theme reflecting
+    lifecycle state — a resolved card visually sinks to 'settled' (SURFACES.md,
+    INTEGRATION.md §4). action_id stays opaque; the action_map never ships here.
+    """
+    out = dict(payload or {})
+    if state in ("acted", "dismissed", "expired"):
+        out["theme"] = "settled"
+    return out
+
+
 def card_to_whatsapp(card: DonnaCard) -> OutboundMessage | None:
     """Project a DonnaCard to a WhatsApp message.
 

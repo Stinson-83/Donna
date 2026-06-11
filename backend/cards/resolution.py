@@ -118,20 +118,22 @@ def _settle(card, action_id: str, surface: str, state: str) -> None:
 
 
 async def _run_execute(user_id, tool, targs, decision):
-    """Execute the tapped action's tool through the gate.
+    """Execute the tapped action's tool, post-gate, via the executor registry.
 
-    No execute-capable action tools (send_email, transfer, ...) are wired into
-    card resolution yet — that is integration work. Be honest rather than claim
-    success: leave the card pending so it can run once the tool exists. The gate
-    has already assigned the correct tier (decision.tier) for when it is.
+    The tap IS the authorization for L0/L1 (the card was the approval); the gate
+    has assigned decision.tier. Unknown tools are honestly declined (card stays
+    pending) rather than silently dropped.
     """
+    from backend.cards.executors import EXECUTORS
     from delivery.messages import TextMessage
 
-    logger.info(
-        "card execute (not wired): tool=%s tier=%s reason=%s",
-        tool, decision.tier, decision.reason,
-    )
-    return (
-        [TextMessage(body="got it. heads up: actually doing this isn't connected to your accounts yet.")],
-        False,
-    )
+    executor = EXECUTORS.get((tool or "").strip())
+    if executor is None:
+        logger.info(
+            "card execute: no executor for tool=%s (tier=%s)", tool, decision.tier
+        )
+        return (
+            [TextMessage(body="got it. heads up: that action isn't connected to your accounts yet.")],
+            False,
+        )
+    return await executor(user_id, targs or {})

@@ -106,3 +106,88 @@ async def test_tap_belongs_to_other_user_rejected(db):
     # u2 cannot resolve u1's card
     res = await resolve_card_action("u2", "c_owned_by_u1:a_dismiss")
     assert res.status == "rejected"
+
+
+# ── app surface projection ──────────────────────────────────────────────
+
+def test_card_to_app_settles_resolved():
+    from backend.cards.projection import card_to_app
+
+    payload = {
+        "version": 1, "card_id": "c", "intent": "heads_up", "theme": "dark",
+        "blocks": [{"type": "body", "text": "x"}],
+    }
+    assert card_to_app(payload, "pending")["theme"] == "dark"
+    assert card_to_app(payload, "acted")["theme"] == "settled"
+    assert card_to_app(payload, "dismissed")["theme"] == "settled"
+    assert card_to_app(payload, "expired")["theme"] == "settled"
+    # the action_map never rides along to the client
+    assert "action_map" not in card_to_app(payload, "pending")
+
+
+# ── send_email executor + execute resolution ────────────────────────────
+
+def _patch_send(monkeypatch, sink: dict):
+    async def fake_send_gmail(self, user_id, *, body, thread_id=None, to=None, subject=None):
+        sink.update(user_id=user_id, body=body, thread_id=thread_id, to=to, subject=subject)
+        return {"ok": True}
+
+    monkeypatch.setattr(
+        "backend.integrations.composio_client.ComposioClient.send_gmail", fake_send_gmail
+    )
+
+
+@pytest.mark.asyncio
+async def test_send_email_executor(monkeypatch):
+    from backend.cards.executors import send_email
+
+    sink: dict = {}
+    _patch_send(monkeypatch, sink)
+
+    out, ok = await send_email("u1", {"body": "thanks, can we take 48 hours", "thread_id": "t1"})
+    assert ok is True
+    assert sink["thread_id"] == "t1"
+    assert "48 hours" in sink["body"]
+
+    # nothing to send -> honest no-op
+    _, ok2 = await send_email("u1", {"body": "   "})
+    assert ok2 is False
+
+
+@pytest.mark.asyncio
+async def test_tap_send_executes_and_settles(db, monkeypatch):
+    sink: dict = {}
+    _patch_send(monkeypatch, sink)
+
+    card = _heads_up_card(card_id="c_send")
+    amap = {
+        "a_send": {
+            "kind": "execute",
+            "tool": "send_email",
+            "args": {"thread_id": "t1", "body": "thanks, we're keen. 48 hours to review?"},
+        }
+    }
+    await persist_card("u1", card, amap)
+
+    res = await resolve_card_action("u1", "c_send:a_send")
+    assert res.status == "handled"
+    assert sink["thread_id"] == "t1"  # actually sent via the executor
+
+    async with db() as s:
+        row = (await s.execute(select(Card).where(Card.id == "c_send"))).scalar_one()
+    assert row.state == "acted"
+    assert row.acted_action_id == "a_send"
+
+
+@pytest.mark.asyncio
+async def test_tap_execute_unknown_tool_stays_pending(db):
+    card = _heads_up_card(card_id="c_unknown")
+    amap = {"a_x": {"kind": "execute", "tool": "not_a_real_tool", "args": {}}}
+    await persist_card("u1", card, amap)
+
+    res = await resolve_card_action("u1", "c_unknown:a_x")
+    assert res.status == "handled"
+    assert res.outbound  # honest "not connected" message
+    async with db() as s:
+        row = (await s.execute(select(Card).where(Card.id == "c_unknown"))).scalar_one()
+    assert row.state == "pending"  # not settled — can retry when the tool exists

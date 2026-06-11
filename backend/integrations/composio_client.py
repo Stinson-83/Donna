@@ -361,3 +361,32 @@ class ComposioClient:
             },
         )
         return (result.get("data") or {}).get("items", [])
+
+    async def send_gmail(
+        self,
+        user_id: str,
+        *,
+        body: str,
+        thread_id: str | None = None,
+        to: str | None = None,
+        subject: str | None = None,
+    ) -> dict:
+        """Send a new email or reply to a thread via Composio Gmail.
+
+        thread_id present -> GMAIL_REPLY_TO_THREAD (keeps the conversation).
+        Otherwise -> GMAIL_SEND_EMAIL (needs to + subject).
+        """
+        composio = _composio()
+        if thread_id:
+            slug = "GMAIL_REPLY_TO_THREAD"
+            arguments: dict = {"thread_id": thread_id, "message_body": body}
+            if to:
+                arguments["recipient_email"] = to
+        else:
+            slug = "GMAIL_SEND_EMAIL"
+            arguments = {
+                "recipient_email": to or "",
+                "subject": subject or "",
+                "body": body,
+            }
+        return composio.tools.execute(slug, user_id=user_id, arguments=arguments)
