@@ -2015,6 +2015,44 @@ async def recall_about(args):
     return text_content(await _recall_about(uid, entity))
 
 
+@tool(
+    "track_interest",
+    (
+        "Record a durable interest the user wants kept an eye on — a sports team, "
+        "a company, a stock, a creator, a topic, a hobby. Donna then monitors the "
+        "web on her own and surfaces genuinely-new developments (a fixture, a "
+        "launch, a price move, news) without being asked again. "
+        "WHEN NOT TO USE: a passing mention with no follow-the-topic intent, or a "
+        "one-off lookup (use web_search)."
+    ),
+    {
+        "type": "object",
+        "required": ["topic"],
+        "properties": {
+            "topic": {"type": "string", "description": "The thing to follow, e.g. 'Arsenal', 'Nvidia stock', 'the F1 season'."},
+        },
+    },
+)
+@traceable(name="donna.tool.track_interest", run_type="tool")
+async def track_interest(args):
+    uid = _current_user_id()
+    if not uid:
+        return text_content("interest not saved: no user in scope (runtime bug, just reply).")
+    topic = str(args.get("topic") or "").strip()
+    if not topic:
+        return text_content("interest not saved: 'topic' is required.")
+    from backend.knowledge.interests import add_interest
+
+    try:
+        await add_interest(uid, topic)
+    except Exception:
+        logger.exception("track_interest: write failed")
+        return text_content("interest not saved: internal error (non-fatal, just reply).")
+    return text_content(
+        f"got it — i'll keep an eye on {topic} and tell you when something worth knowing comes up."
+    )
+
+
 DONNA_TOOLS = (
     recall,
     recall_about,
@@ -2022,6 +2060,7 @@ DONNA_TOOLS = (
     watch,
     schedule,
     track_goal,
+    track_interest,
     check_calendar,
     image,
     web_search,

@@ -161,6 +161,22 @@ async def maybe_surface_birthday(user_id: str, *, now_utc: datetime | None = Non
     await record_ping(user_id, f"birthday_{name.lower()}", name)
 
 
+# ── interests -> web watches (the "you like X, so monitor X" pass) ─────────
+
+async def maybe_watch_interests(user_id: str) -> None:
+    """Ensure each stored interest has a web watch, so a passive interest ('likes
+    Arsenal') becomes active monitoring on its own. Idempotent — create_watch
+    dedupes on (user, type, subject), so this just tops up missing watches."""
+    from backend.knowledge.interests import list_interests
+    from backend.proactive.watches import create_watch
+
+    for topic in await list_interests(user_id):
+        try:
+            await create_watch(user_id, "web", topic, title=topic, importance=45)
+        except Exception:
+            logger.exception("maybe_watch_interests: create_watch failed user=%s topic=%s", user_id[:8], topic)
+
+
 # ── shared ────────────────────────────────────────────────────────────────
 
 async def _pinged_since(session, user_id: str, source: str, cutoff: datetime) -> bool:

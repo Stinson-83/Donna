@@ -32,9 +32,13 @@ def default_checks() -> list[ProactiveCheck]:
     """The registered proactive checks. Imported lazily so the runner module
     stays cheap to import (and tests can pass their own list)."""
     from backend.finance.trigger import maybe_surface_finance
-    from backend.proactive.checks import maybe_checkin_meal, maybe_surface_birthday
+    from backend.proactive.checks import (
+        maybe_checkin_meal,
+        maybe_surface_birthday,
+        maybe_watch_interests,
+    )
 
-    return [maybe_surface_finance, maybe_checkin_meal, maybe_surface_birthday]
+    return [maybe_surface_finance, maybe_checkin_meal, maybe_surface_birthday, maybe_watch_interests]
 
 
 async def _active_user_ids() -> list[str]:

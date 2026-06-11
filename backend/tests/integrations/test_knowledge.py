@@ -8,7 +8,7 @@ from datetime import timedelta
 import pytest
 from sqlalchemy import select
 
-from db.models import CalendarEntry, Fact, Goal, OpenLoop, User, utcnow
+from db.models import CalendarEntry, Fact, Goal, OpenLoop, User, Watch, utcnow
 
 
 # ── goals ────────────────────────────────────────────────────────────────
@@ -77,4 +77,28 @@ def test_tools_registered():
     from donna_runtime.tools import DONNA_TOOLS
 
     names = [getattr(t, "name", "") for t in DONNA_TOOLS]
-    assert "track_goal" in names and "recall_about" in names
+    assert "track_goal" in names and "recall_about" in names and "track_interest" in names
+
+
+# ── interests -> automatic web monitoring (the football scenario) ─────────
+
+@pytest.mark.asyncio
+async def test_interest_becomes_a_web_watch(db):
+    from backend.knowledge.interests import add_interest, list_interests
+    from backend.proactive.checks import maybe_watch_interests
+
+    assert await add_interest("u1", "Arsenal") is True
+    assert await add_interest("u1", "arsenal") is False  # deduped
+    assert "Arsenal" in await list_interests("u1")
+
+    # the runner pass turns a passive interest into active web monitoring
+    await maybe_watch_interests("u1")
+    async with db() as s:
+        rows = (await s.execute(select(Watch).where(Watch.user_id == "u1", Watch.watch_type == "web"))).scalars().all()
+    assert any(w.subject_key == "Arsenal" and w.status == "active" for w in rows)
+
+    # idempotent — no duplicate watch on the next tick
+    await maybe_watch_interests("u1")
+    async with db() as s:
+        rows2 = (await s.execute(select(Watch).where(Watch.user_id == "u1", Watch.subject_key == "Arsenal"))).scalars().all()
+    assert len(rows2) == 1
