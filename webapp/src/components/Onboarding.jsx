@@ -1,9 +1,12 @@
 import { useState } from 'react'
 import { claimProfile, useDemo } from '../identity.js'
+import { connectAccount, runOnboarding } from '../cards.js'
 
-// First-run gate. Either claim a profile (your own evolving model) or explore
-// the seeded demo. Sets identity in localStorage, then calls onDone().
+// First-run gate. Step 1: claim a profile (or explore the demo). Step 2: connect
+// Google so Donna can backfill the calendar + key relationships on day one.
+// Sets identity in localStorage, then calls onDone().
 export default function Onboarding({ onDone }) {
+  const [step, setStep] = useState('profile') // profile | connect
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
 
@@ -11,13 +14,15 @@ export default function Onboarding({ onDone }) {
     e.preventDefault()
     if (!name.trim()) return
     claimProfile(name.trim(), email.trim() || null)
-    onDone()
+    setStep('connect') // identity is set; let them connect before entering the app
   }
 
   function demo() {
     useDemo()
     onDone()
   }
+
+  if (step === 'connect') return <ConnectStep name={name} onDone={onDone} />
 
   return (
     <div className="flex h-full flex-col justify-center px-8 pb-16 pt-14">
@@ -64,6 +69,75 @@ export default function Onboarding({ onDone }) {
         style={{ animationDelay: '240ms' }}
       >
         just exploring? see the demo
+      </button>
+    </div>
+  )
+}
+
+function ConnectStep({ name, onDone }) {
+  const [state, setState] = useState('idle') // idle | connecting | connected | running
+
+  async function connect() {
+    setState('connecting')
+    try {
+      const res = await connectAccount('googlecalendar')
+      if (res?.url) window.open(res.url, '_blank', 'noopener')
+      setState('connected')
+    } catch {
+      setState('idle')
+    }
+  }
+
+  async function finish(backfill) {
+    setState('running')
+    try {
+      if (backfill) await runOnboarding()
+    } catch {
+      /* backfill also runs server-side on the connect webhook — non-fatal */
+    }
+    onDone()
+  }
+
+  const connected = state === 'connected' || state === 'running'
+
+  return (
+    <div className="flex h-full flex-col justify-center px-8 pb-16 pt-14">
+      <div className="reveal">
+        <h1 className="font-serif text-[34px] leading-[1.08] lowercase text-ink">
+          {name ? `nice to meet you, ${name.trim().toLowerCase()}.` : 'one more thing.'}
+        </h1>
+        <p className="mt-3 text-[15px] leading-relaxed lowercase text-soft">
+          connect your google so i can see your calendar and notice what matters.
+          i only read — i never send or delete anything without you.
+        </p>
+      </div>
+
+      <div className="reveal mt-9" style={{ animationDelay: '120ms' }}>
+        {!connected ? (
+          <button
+            onClick={connect}
+            disabled={state === 'connecting'}
+            className="w-full rounded-full bg-rust py-3 text-[15px] lowercase text-white transition disabled:opacity-50"
+          >
+            {state === 'connecting' ? 'opening…' : 'connect google'}
+          </button>
+        ) : (
+          <button
+            onClick={() => finish(true)}
+            disabled={state === 'running'}
+            className="w-full rounded-full bg-rust py-3 text-[15px] lowercase text-white transition disabled:opacity-50"
+          >
+            {state === 'running' ? 'reading your calendar…' : "i've connected"}
+          </button>
+        )}
+      </div>
+
+      <button
+        onClick={() => finish(false)}
+        className="reveal mt-8 text-center text-[13px] lowercase tracking-wide text-soft underline-offset-4 hover:text-ink hover:underline"
+        style={{ animationDelay: '240ms' }}
+      >
+        skip for now
       </button>
     </div>
   )

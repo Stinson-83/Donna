@@ -95,3 +95,23 @@ export async function runOnboarding(user = getUserId()) {
   if (!res.ok) throw new Error(`onboarding failed: ${res.status}`)
   return res.json()
 }
+
+// Start an OAuth connection (real Composio). Returns { url } to open; on
+// completion the backend webhook auto-runs the backfill.
+export async function connectAccount(provider = 'googlecalendar', user = getUserId()) {
+  if (MOCK) return { ok: true, url: null, provider, mock: true }
+  const res = await fetch(`${API_BASE}/onboarding/connect`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ user, provider }),
+  })
+  if (!res.ok) throw new Error(`connect failed: ${res.status}`)
+  return res.json()
+}
+
+export async function getOnboardingStatus(user = getUserId()) {
+  if (MOCK) return { complete: true, relationships: 3, calendar_events: 6 }
+  const res = await fetch(`${API_BASE}/onboarding/status?user=${encodeURIComponent(user)}`)
+  if (!res.ok) throw new Error(`status failed: ${res.status}`)
+  return res.json()
+}
