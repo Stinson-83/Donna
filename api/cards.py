@@ -194,3 +194,34 @@ async def set_settings(body: SettingsBody) -> dict:
             u.notify_channel = channel
             await s.commit()
     return {"user_id": user_id, "notify_channel": channel}
+
+
+@router.get("/library")
+async def library(user: str) -> dict:
+    """Counts behind the Library drawer: people, documents, trackers (active
+    watches), to-dos (open loops), connected accounts."""
+    from sqlalchemy import func, select
+
+    from api.push import resolve_user_id
+    from db.models import Document, Integration, OpenLoop, User, Watch
+    from db.session import async_session
+
+    user_id = await resolve_user_id(user)
+    async with async_session() as s:
+        u = (await s.execute(select(User).where(User.id == user_id))).scalar_one_or_none()
+        people = 0
+        if u is not None and isinstance(u.living_profile, dict):
+            people = len((u.living_profile.get("biography") or {}).get("relationships") or [])
+        docs = (await s.execute(select(func.count(Document.id)).where(Document.user_id == user_id))).scalar_one()
+        trackers = (await s.execute(select(func.count(Watch.id)).where(Watch.user_id == user_id, Watch.status == "active"))).scalar_one()
+        todos = (await s.execute(select(func.count(OpenLoop.id)).where(OpenLoop.user_id == user_id, OpenLoop.status == "active"))).scalar_one()
+        connected = (await s.execute(select(func.count(Integration.id)).where(Integration.user_id == user_id))).scalar_one()
+
+    return {
+        "user_id": user_id,
+        "people": int(people or 0),
+        "documents": int(docs or 0),
+        "trackers": int(trackers or 0),
+        "todos": int(todos or 0),
+        "connected": int(connected or 0),
+    }

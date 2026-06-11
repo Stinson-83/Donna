@@ -4,7 +4,7 @@ import { actCard, getCards, getToday, getWatches } from '../cards.js'
 
 // The Today / Dashboard screen (donna-design-spec/reference/dashboard-v3).
 // Needs-you cards (the hero is the top dark card) → watching → your day → pulse.
-export default function TodayPage() {
+export default function TodayPage({ onMenu }) {
   const [cards, setCards] = useState([])
   const [watching, setWatching] = useState([])
   const [today, setToday] = useState({ calendar: [], holding: 0, date: '' })
@@ -43,8 +43,19 @@ export default function TodayPage() {
   return (
     <div className="flex h-full flex-col">
       {/* nav */}
-      <div className="flex flex-shrink-0 items-baseline justify-between px-5 pb-3 pt-4">
-        <h1 className="font-serif text-[28px] leading-none text-ink">Today</h1>
+      <div className="flex flex-shrink-0 items-center justify-between px-5 pb-3 pt-4">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={onMenu}
+            aria-label="open library"
+            className="grid h-9 w-9 place-items-center rounded-full border border-line bg-surface text-soft shadow-bubble transition active:bg-ink/5"
+          >
+            <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+              <path d="M4 7h16M4 12h16M4 17h10" />
+            </svg>
+          </button>
+          <h1 className="font-serif text-[28px] leading-none text-ink">Today</h1>
+        </div>
         <span className="sec mr-9">{today.date}</span>
       </div>
 

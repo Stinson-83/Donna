@@ -6,6 +6,7 @@ import TabBar from './components/TabBar.jsx'
 import Fab from './components/Fab.jsx'
 import Capture from './components/Capture.jsx'
 import Onboarding from './components/Onboarding.jsx'
+import Drawer from './components/Drawer.jsx'
 import TodayPage from './pages/TodayPage.jsx'
 import LivePage from './pages/LivePage.jsx'
 import HistoryPage from './pages/HistoryPage.jsx'
@@ -19,6 +20,7 @@ export default function App() {
   // new id) once they claim a profile or pick the demo.
   const [ident, setIdent] = useState(0)
   const [capture, setCapture] = useState(null) // null | 'journal' | 'capture' | 'voice'
+  const [drawer, setDrawer] = useState(false) // the Library drawer
   // Donna notices the time of day. Evenings open in Night.
   const hour = new Date().getHours()
   const [night, setNight] = useState(hour >= 19 || hour < 6)
@@ -79,11 +81,12 @@ export default function App() {
         {/* page — keyed on identity + tab so it remounts (and refetches the
             right person's model) on navigation or a profile switch */}
         <div key={`${getUserId()}:${tab}`} className="fade-in flex flex-1 flex-col overflow-hidden">
-          <Page />
+          <Page onMenu={() => setDrawer(true)} />
         </div>
 
         {tab !== 'live' && <Fab onAction={onFabAction} />}
         {capture && <Capture kind={capture} onClose={() => setCapture(null)} />}
+        <Drawer open={drawer} onClose={() => setDrawer(false)} onNavigate={setTab} />
       </div>
 
       <TabBar tab={tab} onChange={setTab} />

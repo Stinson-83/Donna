@@ -148,6 +148,14 @@ export async function getOnboardingStatus(user = getUserId()) {
   return res.json()
 }
 
+// Library drawer counts: people, documents, trackers, todos, connected.
+export async function getLibrary(user = getUserId()) {
+  if (MOCK) return { people: 31, documents: 38, trackers: 7, todos: 5, connected: 3 }
+  const res = await fetch(`${API_BASE}/library?user=${encodeURIComponent(user)}`)
+  if (!res.ok) throw new Error(`library failed: ${res.status}`)
+  return res.json()
+}
+
 // Which surface Donna reaches you on: 'auto' | 'app' | 'whatsapp'.
 export async function getSettings(user = getUserId()) {
   if (MOCK) return { notify_channel: 'auto' }
