@@ -989,7 +989,19 @@ async def check_calendar(args):
         "properties": {
             "intent": {
                 "type": "string",
-                "description": "Natural instruction, e.g. keep an eye on Poke launch updates.",
+                "description": "Natural label for the watch, e.g. 'tell me when sequoia replies' or 'keep an eye on the AWS bill'.",
+            },
+            "watch_type": {
+                "type": "string",
+                "description": "'reply' when waiting on an email/message from someone (set `subject` to who). 'web' to monitor the web for news/updates on a topic (set `subject` to the search topic). Otherwise 'generic'.",
+            },
+            "subject": {
+                "type": "string",
+                "description": "Who/what to watch. reply -> the sender's name or email ('sequoia'). web -> the search topic ('Poke launch updates', 'tokyo flight prices').",
+            },
+            "deadline": {
+                "type": "string",
+                "description": "Optional ISO datetime if there's a hard date (drives how often Donna checks).",
             },
             "auto_live": {
                 "type": "boolean",
@@ -1008,28 +1020,35 @@ async def watch(args):
         )
     if not intent:
         return text_content(
-            "Watch not created: 'intent' is required. Pass a natural instruction "
-            "describing what Donna should keep an eye on, e.g. "
-            "intent='keep an eye on the Poke launch updates'."
+            "Watch not created: 'intent' is required. Pass a natural label for what "
+            "Donna should keep an eye on, e.g. intent='tell me when sequoia replies'."
         )
-    try:
-        from donna.attention.tools import create_attention
+    watch_type = str(args.get("watch_type") or "generic").strip().lower()
+    subject = str(args.get("subject") or "").strip() or intent
+    deadline = None
+    raw_deadline = args.get("deadline")
+    if raw_deadline:
+        try:
+            from datetime import datetime, timezone
 
-        result = await create_attention(
-            intent,
-            user_id=user_id,
-            auto_live=bool(args.get("auto_live", True)),
+            dt = datetime.fromisoformat(str(raw_deadline))
+            deadline = dt.astimezone(timezone.utc).replace(tzinfo=None) if dt.tzinfo else dt
+        except Exception:
+            deadline = None
+    try:
+        from backend.proactive.watches import create_watch
+
+        await create_watch(
+            user_id, watch_type, subject, title=intent, deadline=deadline,
+            importance=int(args.get("importance") or 60),
         )
-    except Exception as exc:
-        logger.exception("watch wrapper failed")
-        return text_content(
-            f"Watch not created: {type(exc).__name__}. "
-            f"The attention backend may be unavailable — do not retry this turn."
-        )
-    title = result.attention.spec.title
-    status = result.attention.status.value
-    card = result.attention.spec.card.value
-    return text_content(f"watch created: '{title}' ({card}, status={status})")
+    except Exception:
+        logger.exception("watch tool: create_watch failed")
+        return text_content("Watch not created: internal error (non-fatal, just reply).")
+    return text_content(
+        f"watch created: '{intent}' (type={watch_type}). i'll keep an eye on it and "
+        "tell you when something changes."
+    )
 
 
 @tool(

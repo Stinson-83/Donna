@@ -594,3 +594,34 @@ class FinanceTransaction(Base):
         Index("idx_txn_user_occurred", "user_id", "occurred_at"),
         Index("idx_txn_account", "account_id"),
     )
+
+
+class Watch(Base):
+    """A standing situation Donna monitors for the user (proactive_runner.md).
+
+    Evaluated only when due (next_check <= now), with an adaptive cadence
+    (compute_next_check). Each watch_type has an evaluator that does a cheap
+    deterministic diff against last_known_state and only surfaces (wakes the
+    BRAIN loop) on a material change. This is what backs the dashboard's
+    'watching' list and makes 'keep an eye on X' actually function.
+    """
+    __tablename__ = "watches"
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=generate_uuid)
+    user_id: Mapped[str] = mapped_column(String, ForeignKey("users.id"), nullable=False)
+    watch_type: Mapped[str] = mapped_column(String, nullable=False)   # reply | bill | generic | ...
+    subject_key: Mapped[str] = mapped_column(String, nullable=False)  # who/what (sender, bill id, topic)
+    title: Mapped[str] = mapped_column(String, nullable=False)        # human label for the watching list
+    status: Mapped[str] = mapped_column(String, nullable=False, default="active")  # active | fired | retired
+    importance: Mapped[int] = mapped_column(Integer, nullable=False, default=50)
+    deadline: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    next_check: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=utcnow)
+    last_checked_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    last_known_state: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
+    stable_checks: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, nullable=False)
+
+    __table_args__ = (
+        Index("uq_watch_user_type_subject", "user_id", "watch_type", "subject_key", unique=True),
+        Index("idx_watch_status_next", "status", "next_check"),
+        Index("idx_watch_user_status", "user_id", "status"),
+    )

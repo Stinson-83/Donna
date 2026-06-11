@@ -92,6 +92,11 @@ from api.onboarding import router as _onboarding_router  # noqa: E402
 
 app.include_router(_onboarding_router)
 
+# Watches — the dashboard 'watching' list.
+from api.watches import router as _watches_router  # noqa: E402
+
+app.include_router(_watches_router)
+
 _wa = WhatsAppChannel()
 _brief_refresh_task: asyncio.Task | None = None
 _bootstrap_task: asyncio.Task | None = None  # backgrounded DB/table bootstrap (keeps startup instant)

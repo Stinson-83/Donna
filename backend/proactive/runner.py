@@ -51,9 +51,8 @@ async def run_once(checks: list[ProactiveCheck] | None = None) -> int:
     """One tick: run every check for every user. Returns the number of
     (user, check) evaluations performed. Each evaluation is isolated — one
     failure never aborts the sweep."""
+    explicit = checks is not None
     checks = default_checks() if checks is None else checks
-    if not checks:
-        return 0
     user_ids = await _active_user_ids()
     evaluations = 0
     for uid in user_ids:
@@ -66,6 +65,14 @@ async def run_once(checks: list[ProactiveCheck] | None = None) -> int:
                     "proactive: check %s failed for user=%s",
                     getattr(check, "__name__", check), uid[:8],
                 )
+    # The default tick also sweeps due watches (the active-watch system).
+    if not explicit:
+        try:
+            from backend.proactive.watches import sweep_due_watches
+
+            await sweep_due_watches()
+        except Exception:
+            logger.exception("proactive: watch sweep failed")
     if user_ids:
         logger.info(
             "proactive: tick swept %d users x %d checks", len(user_ids), len(checks)
