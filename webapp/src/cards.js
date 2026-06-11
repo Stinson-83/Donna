@@ -102,6 +102,21 @@ export async function getToday(user = getUserId()) {
   return res.json()
 }
 
+const MOCK_HISTORY = [
+  { from: 'user', text: 'remind raghav about the demo at 3', surface: 'whatsapp', time: '7:42 AM', date: 'Thu 11 Jun', proactive: false },
+  { from: 'donna', text: "done. i'll nudge him at 2:30 and tell you if he doesn't confirm.", surface: 'whatsapp', time: '7:42 AM', date: 'Thu 11 Jun', proactive: false },
+  { from: 'donna', text: 'your **SQ516** landing moved to 9:40 PM. the pickup with aniroodh still says 6:30, so he\'d be waiting almost three hours.', surface: 'app', time: '8:42 AM', date: 'Thu 11 Jun', proactive: true },
+  { from: 'user', text: 'move it and tell him', surface: 'app', time: '8:44 AM', date: 'Thu 11 Jun', proactive: false },
+  { from: 'donna', text: 'balance is **S$31,240**, clears the requirement with room. filed a copy to your permit folder.', surface: 'whatsapp', time: '5:52 PM', date: 'Thu 11 Jun', proactive: false },
+]
+
+export async function getHistory(user = getUserId()) {
+  if (MOCK) return { messages: MOCK_HISTORY }
+  const res = await fetch(`${API_BASE}/history?user=${encodeURIComponent(user)}`)
+  if (!res.ok) throw new Error(`history failed: ${res.status}`)
+  return res.json()
+}
+
 export async function runOnboarding(user = getUserId()) {
   if (MOCK) return { status: 'complete', events: 0, relationships: 0 }
   const res = await fetch(`${API_BASE}/onboarding/run`, {

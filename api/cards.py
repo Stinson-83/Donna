@@ -120,3 +120,36 @@ async def today(user: str) -> dict:
         "calendar": [{"time": _t(c.start_time), "title": c.title, "note": c.location or ""} for c in cal],
         "holding": int(n_watch or 0) + int(n_card or 0) + int(n_loop or 0),
     }
+
+
+@router.get("/history")
+async def history(user: str, limit: int = 80) -> dict:
+    """The cross-surface message stream (app + WhatsApp), chronological."""
+    from sqlalchemy import select
+
+    from api.push import resolve_user_id
+    from db.models import ChatMessage
+    from db.session import async_session
+
+    user_id = await resolve_user_id(user)
+    async with async_session() as s:
+        rows = (await s.execute(
+            select(ChatMessage).where(ChatMessage.user_id == user_id)
+            .order_by(ChatMessage.created_at.desc()).limit(limit)
+        )).scalars().all()
+    rows = list(reversed(rows))  # chronological (oldest -> newest)
+
+    def _fmt(dt):
+        return dt.strftime("%I:%M %p").lstrip("0")
+
+    return {
+        "user_id": user_id,
+        "messages": [{
+            "from": "user" if r.role == "user" else "donna",
+            "text": r.content,
+            "surface": "whatsapp" if r.wa_message_id else "app",
+            "time": _fmt(r.created_at),
+            "date": r.created_at.strftime("%a %d %b"),
+            "proactive": bool(r.is_proactive),
+        } for r in rows],
+    }

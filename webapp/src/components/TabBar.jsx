@@ -1,34 +1,46 @@
-// Quiet, editorial navigation. No filled icons, no badges — just words, with a
-// single rust mark under the active tab (rust used sparingly, by design).
+// Design-spec navigation (donna-design-spec): Dashboard / Live / History.
+// Single-weight stroke icons + label; rust marks the active tab.
+const ICON = {
+  dashboard: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="3" width="7" height="9" rx="1.5" /><rect x="14" y="3" width="7" height="5" rx="1.5" />
+      <rect x="14" y="12" width="7" height="9" rx="1.5" /><rect x="3" y="16" width="7" height="5" rx="1.5" />
+    </svg>
+  ),
+  live: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 11.5a8.4 8.4 0 0 1-8.5 8.3 8.8 8.8 0 0 1-3.9-.9L3 20l1.2-5.3a8 8 0 0 1-.7-3.2A8.4 8.4 0 0 1 12 3.2a8.4 8.4 0 0 1 9 8.3z" />
+    </svg>
+  ),
+  history: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 3" />
+    </svg>
+  ),
+}
+
 const TABS = [
-  { key: 'plan', label: 'plan' },
-  { key: 'chat', label: 'chat' },
-  { key: 'beliefs', label: 'beliefs' },
-  { key: 'memory', label: 'memory' },
+  { key: 'dashboard', label: 'Dashboard' },
+  { key: 'live', label: 'Live' },
+  { key: 'history', label: 'History' },
 ]
 
 export default function TabBar({ tab, onChange }) {
   return (
-    <div className="safe-bottom safe-x z-20 flex items-stretch px-6 pb-3 pt-2.5">
+    <div
+      className="safe-bottom safe-x z-20 flex"
+      style={{ background: 'rgba(248,243,236,0.94)', borderTop: '1px solid rgba(63,46,35,0.05)' }}
+    >
       {TABS.map((t) => {
         const active = tab === t.key
         return (
           <button
             key={t.key}
             onClick={() => onChange(t.key)}
-            className="flex flex-1 flex-col items-center gap-1.5 py-1"
+            className={`flex flex-1 flex-col items-center gap-[3px] pb-1 pt-2.5 transition-colors ${active ? 'text-accent' : 'text-faint'}`}
           >
-            <span
-              className={`text-[13px] lowercase tracking-wide transition-colors duration-300 ${
-                active ? 'text-ink' : 'text-soft/60'
-              }`}
-            >
-              {t.label}
-            </span>
-            <span
-              className="h-[3px] w-[3px] rounded-full transition-all duration-300"
-              style={{ background: active ? 'rgb(var(--rust))' : 'transparent' }}
-            />
+            <span className="h-[22px] w-[22px]">{ICON[t.key]}</span>
+            <span className="text-[10.5px] font-semibold">{t.label}</span>
           </button>
         )
       })}

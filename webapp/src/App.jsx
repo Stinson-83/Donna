@@ -8,14 +8,13 @@ import Capture from './components/Capture.jsx'
 import Onboarding from './components/Onboarding.jsx'
 import TodayPage from './pages/TodayPage.jsx'
 import LivePage from './pages/LivePage.jsx'
-import BeliefsPage from './pages/BeliefsPage.jsx'
-import MemoryPage from './pages/MemoryPage.jsx'
+import HistoryPage from './pages/HistoryPage.jsx'
 import { hasIdentity, getUserId } from './identity.js'
 
-const PAGES = { plan: TodayPage, chat: LivePage, beliefs: BeliefsPage, memory: MemoryPage }
+const PAGES = { dashboard: TodayPage, live: LivePage, history: HistoryPage }
 
 export default function App() {
-  const [tab, setTab] = useState('plan')
+  const [tab, setTab] = useState('dashboard')
   // First-run identity gate. A version bump re-renders (and remounts pages on a
   // new id) once they claim a profile or pick the demo.
   const [ident, setIdent] = useState(0)
@@ -50,7 +49,7 @@ export default function App() {
   // The FAB leaves a thought with Donna. 'a thought' opens the live chat; the
   // rest open the quick-capture sheet, which writes into the cognition layer.
   function onFabAction(key) {
-    if (key === 'chat') setTab('chat')
+    if (key === 'chat') setTab('live')
     else setCapture(key)
   }
 
@@ -83,7 +82,7 @@ export default function App() {
           <Page />
         </div>
 
-        {tab !== 'chat' && <Fab onAction={onFabAction} />}
+        {tab !== 'live' && <Fab onAction={onFabAction} />}
         {capture && <Capture kind={capture} onClose={() => setCapture(null)} />}
       </div>
 
