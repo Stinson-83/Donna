@@ -95,6 +95,18 @@ async def _ensure_user(user_id: str) -> None:
         logger.exception("composio_webhook: _ensure_user(%r) failed", user_id)
 
 
+async def _run_onboarding_bg(user_id: str) -> None:
+    """Backfill the user's life right after an account connects, so the proactive
+    checks have real data immediately. Best-effort; the app can also trigger it
+    via POST /onboarding/run."""
+    try:
+        from backend.onboarding.service import run_onboarding
+
+        await run_onboarding(user_id)
+    except Exception:
+        logger.exception("composio_webhook: onboarding backfill failed user=%s", user_id)
+
+
 async def _process_v3_gmail(user_id: str, data: dict) -> None:
     """Background processor for a V3 Gmail event: dedupe → ingest → sync mark.
 
@@ -255,7 +267,8 @@ async def composio_webhook(
                 connection_id=connection_id,
                 trigger_names=triggers,
             )
-        # Bootstrap enqueue happens in P3.
+        # Bootstrap: backfill the user's life from the freshly connected account.
+        _spawn(_run_onboarding_bg(user_id), name=f"onboarding_{user_id}")
         return {"ok": True}
 
     if event in {"connection.revoked", "connection.expired"}:

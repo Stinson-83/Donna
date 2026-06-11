@@ -87,6 +87,11 @@ from api.cards import router as _cards_router  # noqa: E402
 
 app.include_router(_cards_router)
 
+# Onboarding — backfill the user's life from connected accounts.
+from api.onboarding import router as _onboarding_router  # noqa: E402
+
+app.include_router(_onboarding_router)
+
 _wa = WhatsAppChannel()
 _brief_refresh_task: asyncio.Task | None = None
 _bootstrap_task: asyncio.Task | None = None  # backgrounded DB/table bootstrap (keeps startup instant)
