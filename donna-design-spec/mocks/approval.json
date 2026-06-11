@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "card_id": "c_8f21",
+  "intent": "approval",
+  "theme": "dark",
+  "expires_at": "2026-06-11T18:00:00+08:00",
+  "blocks": [
+    { "type": "header", "label": "needs your approval", "ref": "SQ516 · T3" },
+    { "type": "body", "text": "flight delayed to **9:40 PM**. move the pickup and tell aniroodh?" },
+    { "type": "delta", "from": "6:30", "to": "8:45 PM", "from_caption": "current", "to_caption": "proposed", "kind": "time" },
+    { "type": "key_values", "rows": [
+      { "k": "Notifies", "v": "Aniroodh" },
+      { "k": "Buffer after landing", "v": "35 min" }
+    ]},
+    { "type": "actions", "actions": [
+      { "label": "Approve", "action_id": "a_move_pickup_845", "style": "primary" },
+      { "label": "Not now", "action_id": "a_dismiss", "style": "secondary" }
+    ]}
+  ]
+}

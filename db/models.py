@@ -490,3 +490,37 @@ class ProactivePing(Base):
     __table_args__ = (
         Index("idx_pings_user_fired", "user_id", "fired_at"),
     )
+
+
+class Card(Base):
+    """Persistence wrapper around a DonnaCard payload (donna-design-spec).
+
+    payload    = the validated DonnaCard (version, intent, theme, blocks[]) sent
+                 to every surface. Owned by donna-design-spec/schema/card.schema.json.
+    action_map = SERVER-ONLY: action_id -> {kind, tool, args, tier}. Never sent to
+                 the client; the wire only carries opaque action_ids.
+    state      = drives DonnaCard.theme (pending -> dark/light; acted/expired/
+                 dismissed -> settled). See donna-design-spec/INTEGRATION.md.
+    id         = the DonnaCard.card_id (stable across surfaces so a tap on any
+                 surface resolves the same card).
+    """
+    __tablename__ = "cards"
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=generate_uuid)
+    user_id: Mapped[str] = mapped_column(String, ForeignKey("users.id"), nullable=False)
+    message_id: Mapped[str | None] = mapped_column(String, nullable=True)
+    intent: Mapped[str] = mapped_column(String, nullable=False)
+    payload: Mapped[dict] = mapped_column(JSONB, nullable=False)
+    action_map: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
+    state: Mapped[str] = mapped_column(String, nullable=False, default="pending")
+    # pending | acted | dismissed | expired | superseded
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    acted_action_id: Mapped[str | None] = mapped_column(String, nullable=True)
+    acted_surface: Mapped[str | None] = mapped_column(String, nullable=True)
+    acted_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    card_metadata: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, nullable=False)
+
+    __table_args__ = (
+        Index("idx_cards_user_state", "user_id", "state"),
+        Index("idx_cards_user_created", "user_id", "created_at"),
+    )

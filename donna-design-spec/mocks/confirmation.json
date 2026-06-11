@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "card_id": "c_9d04",
+  "intent": "confirmation",
+  "theme": "settled",
+  "expires_at": null,
+  "blocks": [
+    { "type": "header", "label": "done" },
+    { "type": "body", "text": "pickup moved to **8:45 PM**" },
+    { "type": "footer", "text": "whatsapp sent · aniroodh replied \"got it\" at 8:51" }
+  ]
+}

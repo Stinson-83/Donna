@@ -44,3 +44,4 @@ class IngressPayload:
     platform_message_id: str | None = None      # wa_message_id, etc.
     platform_profile_name: str | None = None
     reply_to_id: str | None = None              # swipe-reply context
+    card_action: str | None = None              # "card_id:action_id" when a card button was tapped

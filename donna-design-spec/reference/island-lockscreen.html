@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Donna · outside the app</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=EB+Garamond:wght@500;600&family=Red+Hat+Text:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#201A14; --espresso:#251D16;
+    --cream:#F3EBE1; --cream-60:rgba(243,235,225,0.62); --cream-40:rgba(243,235,225,0.4);
+    --copper:#C99A7E; --accent:#7B5544; --green:#5E9C72;
+    --sans:'Red Hat Text',-apple-system,sans-serif;
+    --serif:'EB Garamond',Georgia,serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-font-smoothing:antialiased}
+  body{
+    background:#CFC5B8;font-family:var(--sans);color:var(--ink);
+    padding:28px 0 60px;display:flex;flex-direction:column;align-items:center;gap:44px;
+  }
+  .slide{display:flex;flex-direction:column;align-items:center;gap:14px}
+  .slide-label{font-size:12px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#7A6E60}
+
+  /* status-bar strip frames for island states */
+  .strip{
+    width:min(392px,94vw);
+    border-radius:34px;
+    background:
+      radial-gradient(140% 120% at 70% -20%, #4A3526 0%, #2A1F16 55%, #16100B 100%);
+    box-shadow:0 4px 10px rgba(40,28,18,0.15), 0 22px 50px rgba(40,28,18,0.3), inset 0 0 0 1px rgba(255,255,255,0.05);
+    padding:14px 0 26px;position:relative;overflow:hidden;
+  }
+  .strip + .strip{margin-top:14px}
+  .sb{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:0 30px;height:22px;margin-bottom:10px;
+    font-size:13px;font-weight:700;color:var(--cream);
+  }
+  .sb .icons{display:flex;align-items:center;gap:5px}
+  .sb svg{height:11px;display:block}
+
+  /* ── ISLAND ── */
+  .island{
+    margin:0 auto;background:#000;
+    border-radius:100px;
+    display:flex;align-items:center;
+    box-shadow:0 4px 18px rgba(0,0,0,0.55);
+    position:relative;
+  }
+  .island.compact{height:37px;padding:0 13px;gap:8px;width:fit-content;min-width:126px;justify-content:space-between}
+  .cam{width:13px;height:13px;border-radius:50%;background:#0A0A0C;box-shadow:inset 0 0 3px rgba(60,60,80,0.8);flex-shrink:0}
+
+  .di-wave{display:flex;align-items:center;gap:2px;height:14px}
+  .di-wave i{width:2.5px;border-radius:2px;background:var(--copper);animation:eq 1.3s ease-in-out infinite}
+  .di-wave i:nth-child(1){height:5px}
+  .di-wave i:nth-child(2){height:11px;animation-delay:0.15s}
+  .di-wave i:nth-child(3){height:8px;animation-delay:0.3s}
+  .di-wave i:nth-child(4){height:12px;animation-delay:0.08s}
+  @keyframes eq{0%,100%{transform:scaleY(1)}50%{transform:scaleY(0.4)}}
+  .di-txt{font-size:12.5px;font-weight:700;color:var(--cream);font-variant-numeric:tabular-nums}
+  .di-txt.copper{color:var(--copper)}
+  .di-d{
+    width:20px;height:20px;border-radius:50%;flex-shrink:0;
+    background:radial-gradient(120% 120% at 30% 20%, #4A3526, #251D16);
+    display:flex;align-items:center;justify-content:center;
+    font-family:var(--serif);font-weight:600;font-size:12px;color:var(--copper);
+  }
+
+  /* expanded island */
+  .island.expanded{
+    width:calc(100% - 24px);margin:0 12px;
+    border-radius:38px;flex-direction:column;align-items:stretch;
+    padding:14px 18px 16px;
+  }
+  .ei-top{display:flex;align-items:center;gap:9px;margin-bottom:10px}
+  .ei-label{font-size:10px;font-weight:700;letter-spacing:0.09em;text-transform:uppercase;color:var(--copper)}
+  .ei-ref{margin-left:auto;font-size:10.5px;font-weight:600;color:var(--cream-40)}
+  .ei-line{font-size:14px;line-height:1.5;color:var(--cream-60);margin-bottom:10px}
+  .ei-line b{color:var(--cream);font-weight:700}
+  .ei-delta{display:flex;align-items:baseline;gap:11px;margin-bottom:13px}
+  .ei-old{font-family:var(--serif);font-weight:600;font-size:19px;color:var(--cream-40);text-decoration:line-through;text-decoration-color:rgba(201,154,126,0.7);text-decoration-thickness:1.5px}
+  .ei-new{font-family:var(--serif);font-weight:600;font-size:28px;color:var(--cream);line-height:1}
+  .ei-new span{font-size:14px;color:var(--cream-60);font-weight:500}
+  .ei-actions{display:flex;gap:8px}
+  .ei-btn{
+    flex:1;height:40px;border-radius:12px;border:none;cursor:pointer;
+    font-family:var(--sans);font-size:13.5px;font-weight:700;
+  }
+  .ei-yes{background:linear-gradient(180deg,#FBF6EE,var(--cream));color:var(--espresso);box-shadow:0 2px 6px rgba(0,0,0,0.4)}
+  .ei-no{background:rgba(243,235,225,0.1);color:var(--cream-60);border:1px solid rgba(243,235,225,0.16)}
+
+  .strip-cap{
+    text-align:center;font-size:11px;font-weight:600;color:rgba(243,235,225,0.45);
+    margin-top:12px;
+  }
+
+  /* ── LOCK SCREEN ── */
+  .phone{
+    width:min(392px,94vw);height:820px;border-radius:46px;
+    background:
+      radial-gradient(150% 90% at 50% -15%, #54402D 0%, #2E2218 45%, #150F0A 100%);
+    box-shadow:0 4px 10px rgba(40,28,18,0.15), 0 26px 60px rgba(40,28,18,0.35), inset 0 0 0 1px rgba(255,255,255,0.05);
+    position:relative;overflow:hidden;
+    display:flex;flex-direction:column;align-items:center;
+  }
+  .phone::after{
+    content:'';position:absolute;inset:0;pointer-events:none;opacity:0.4;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.04 0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+  .phone > *{position:relative;z-index:1}
+  .ls-island{height:34px;width:118px;background:#000;border-radius:100px;margin-top:14px;display:flex;align-items:center;padding:0 11px}
+  .ls-date{margin-top:34px;font-size:16px;font-weight:600;color:var(--cream-60)}
+  .ls-clock{
+    font-family:var(--serif);font-weight:500;font-size:84px;line-height:1;
+    color:var(--cream);letter-spacing:-0.02em;margin-top:2px;
+  }
+
+  .ls-stack{margin-top:auto;width:100%;padding:0 14px 14px;display:flex;flex-direction:column;gap:9px}
+
+  /* live activity */
+  .la{
+    background:rgba(20,14,9,0.78);
+    backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);
+    border:1px solid rgba(243,235,225,0.1);
+    border-radius:24px;padding:14px 16px;color:var(--cream);
+    box-shadow:0 8px 30px rgba(0,0,0,0.35);
+  }
+  .la-top{display:flex;align-items:center;gap:9px;margin-bottom:11px}
+  .la-d{
+    width:24px;height:24px;border-radius:7px;
+    background:radial-gradient(120% 120% at 30% 20%, #4A3526, #1C1510);
+    display:flex;align-items:center;justify-content:center;
+    font-family:var(--serif);font-weight:600;font-size:13.5px;color:var(--copper);
+  }
+  .la-name{font-size:12.5px;font-weight:700}
+  .la-status{margin-left:auto;font-size:11px;font-weight:700;color:var(--green)}
+  .la-route{display:flex;align-items:center;justify-content:space-between}
+  .la-pt{display:flex;flex-direction:column;gap:1px}
+  .la-pt.r{text-align:right}
+  .la-big{font-family:var(--serif);font-weight:600;font-size:26px;line-height:1.05}
+  .la-cap{font-size:10px;font-weight:600;letter-spacing:0.05em;text-transform:uppercase;color:var(--cream-40)}
+  .la-mid{flex:1;margin:0 14px;position:relative;height:20px;display:flex;align-items:center}
+  .la-mid .track{flex:1;height:2px;border-radius:2px;background:rgba(243,235,225,0.14);position:relative}
+  .la-mid .fill{position:absolute;left:0;top:0;bottom:0;width:72%;border-radius:2px;background:linear-gradient(90deg,var(--copper),#E0B795)}
+  .la-mid .plane{
+    position:absolute;left:72%;top:50%;transform:translate(-50%,-50%) rotate(45deg);
+    width:7px;height:7px;border-radius:2px;background:#E0B795;
+    box-shadow:0 0 10px rgba(224,183,149,0.8);
+  }
+  .la-foot{margin-top:11px;padding-top:10px;border-top:1px solid rgba(243,235,225,0.09);
+    font-size:12px;color:var(--cream-60);display:flex;justify-content:space-between}
+  .la-foot b{color:var(--cream);font-weight:700}
+
+  /* notification */
+  .notif{
+    background:rgba(243,235,225,0.86);
+    backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);
+    border-radius:24px;padding:13px 15px;
+    box-shadow:0 8px 30px rgba(0,0,0,0.3);
+  }
+  .n-top{display:flex;align-items:center;gap:9px}
+  .n-icon{
+    width:34px;height:34px;border-radius:9px;flex-shrink:0;
+    background:radial-gradient(120% 120% at 30% 20%, #4A3526, #1C1510);
+    display:flex;align-items:center;justify-content:center;
+    font-family:var(--serif);font-weight:600;font-size:19px;color:var(--copper);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,0.1);
+  }
+  .n-app{font-size:13px;font-weight:700;color:var(--ink)}
+  .n-time{margin-left:auto;font-size:11.5px;font-weight:600;color:rgba(32,26,20,0.45)}
+  .n-body{margin:7px 2px 0;font-size:14px;line-height:1.45;color:var(--ink)}
+  .n-body b{font-weight:700}
+  .n-actions{display:flex;gap:8px;margin-top:11px}
+  .n-btn{
+    flex:1;height:38px;border-radius:12px;border:none;cursor:pointer;
+    font-family:var(--sans);font-size:13px;font-weight:700;
+  }
+  .n-yes{background:var(--espresso);color:var(--cream);box-shadow:0 2px 6px rgba(32,22,14,0.3)}
+  .n-no{background:rgba(32,26,20,0.07);color:rgba(32,26,20,0.6)}
+
+  .ls-bottom{display:flex;justify-content:space-between;width:100%;padding:6px 38px 26px}
+  .ls-ctl{width:46px;height:46px;border-radius:50%;
+    background:rgba(243,235,225,0.12);backdrop-filter:blur(10px);
+    display:flex;align-items:center;justify-content:center}
+  .ls-ctl svg{width:18px;height:18px;stroke:var(--cream);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+
+  @media (prefers-reduced-motion:reduce){.di-wave i{animation:none}}
+</style>
+</head>
+<body>
+
+<!-- ════ ISLAND STATES ════ -->
+<div class="slide">
+  <div class="slide-label">Dynamic Island · three states</div>
+  <div>
+    <div class="strip">
+      <div class="sb">
+        <span>2:14</span>
+        <div class="island compact">
+          <div class="cam"></div>
+          <div class="di-wave"><i></i><i></i><i></i><i></i></div>
+          <span class="di-txt">1:24</span>
+        </div>
+        <div class="icons">
+          <svg viewBox="0 0 18 11" fill="#F3EBE1"><rect x="0" y="7" width="3" height="4" rx="0.8"/><rect x="4.5" y="5" width="3" height="6" rx="0.8"/><rect x="9" y="2.5" width="3" height="8.5" rx="0.8"/><rect x="13.5" y="0" width="3" height="11" rx="0.8"/></svg>
+          <svg viewBox="0 0 25 12" fill="none"><rect x="0.5" y="0.5" width="21" height="11" rx="3" stroke="#F3EBE1" opacity="0.5"/><rect x="2" y="2" width="15" height="8" rx="1.5" fill="#F3EBE1"/><path d="M23.5 4v4a2 2 0 0 0 0-4z" fill="#F3EBE1" opacity="0.5"/></svg>
+        </div>
+      </div>
+      <div class="strip-cap">voice session live — waveform + elapsed, tap to return</div>
+    </div>
+
+    <div class="strip">
+      <div class="sb">
+        <span>8:02</span>
+        <div class="island compact">
+          <div class="cam"></div>
+          <span class="di-d">d</span>
+          <span class="di-txt copper">pickup · 43m</span>
+        </div>
+        <div class="icons">
+          <svg viewBox="0 0 18 11" fill="#F3EBE1"><rect x="0" y="7" width="3" height="4" rx="0.8"/><rect x="4.5" y="5" width="3" height="6" rx="0.8"/><rect x="9" y="2.5" width="3" height="8.5" rx="0.8"/><rect x="13.5" y="0" width="3" height="11" rx="0.8"/></svg>
+          <svg viewBox="0 0 25 12" fill="none"><rect x="0.5" y="0.5" width="21" height="11" rx="3" stroke="#F3EBE1" opacity="0.5"/><rect x="2" y="2" width="15" height="8" rx="1.5" fill="#F3EBE1"/><path d="M23.5 4v4a2 2 0 0 0 0-4z" fill="#F3EBE1" opacity="0.5"/></svg>
+        </div>
+      </div>
+      <div class="strip-cap">she's counting down to something — minimal, glanceable</div>
+    </div>
+
+    <div class="strip">
+      <div class="sb" style="margin-bottom:14px">
+        <span>8:42</span>
+        <span style="width:118px"></span>
+        <div class="icons">
+          <svg viewBox="0 0 18 11" fill="#F3EBE1"><rect x="0" y="7" width="3" height="4" rx="0.8"/><rect x="4.5" y="5" width="3" height="6" rx="0.8"/><rect x="9" y="2.5" width="3" height="8.5" rx="0.8"/><rect x="13.5" y="0" width="3" height="11" rx="0.8"/></svg>
+          <svg viewBox="0 0 25 12" fill="none"><rect x="0.5" y="0.5" width="21" height="11" rx="3" stroke="#F3EBE1" opacity="0.5"/><rect x="2" y="2" width="15" height="8" rx="1.5" fill="#F3EBE1"/><path d="M23.5 4v4a2 2 0 0 0 0-4z" fill="#F3EBE1" opacity="0.5"/></svg>
+        </div>
+      </div>
+      <div class="island expanded">
+        <div class="ei-top">
+          <span class="di-d">d</span>
+          <span class="ei-label">Needs your approval</span>
+          <span class="ei-ref">SQ516 · T3</span>
+        </div>
+        <div class="ei-line">flight delayed to <b>9:40 PM</b> — move the pickup and tell aniroodh?</div>
+        <div class="ei-delta">
+          <span class="ei-old">6:30</span>
+          <span class="ei-new">8:45<span> PM</span></span>
+        </div>
+        <div class="ei-actions">
+          <button class="ei-btn ei-yes">Approve</button>
+          <button class="ei-btn ei-no">Not now</button>
+        </div>
+      </div>
+      <div class="strip-cap">long-press — the approval card resolves without opening the app</div>
+    </div>
+  </div>
+</div>
+
+<!-- ════ LOCK SCREEN ════ -->
+<div class="slide">
+  <div class="slide-label">Lock screen · Live Activity + notification</div>
+  <div class="phone">
+    <div class="ls-island"><div class="cam"></div></div>
+    <div class="ls-date">Thursday, June 11</div>
+    <div class="ls-clock">9:12</div>
+
+    <div class="ls-stack">
+
+      <!-- live activity -->
+      <div class="la">
+        <div class="la-top">
+          <div class="la-d">d</div>
+          <span class="la-name">donna</span>
+          <span class="la-status">on schedule</span>
+        </div>
+        <div class="la-route">
+          <div class="la-pt">
+            <span class="la-big">SIN</span>
+            <span class="la-cap">SQ516</span>
+          </div>
+          <div class="la-mid">
+            <div class="track"><div class="fill"></div><div class="plane"></div></div>
+          </div>
+          <div class="la-pt r">
+            <span class="la-big">9:40</span>
+            <span class="la-cap">lands · T3</span>
+          </div>
+        </div>
+        <div class="la-foot">
+          <span>pickup <b>8:45 PM</b> · aniroodh notified</span>
+          <span><b>28 min</b> out</span>
+        </div>
+      </div>
+
+      <!-- actionable notification -->
+      <div class="notif">
+        <div class="n-top">
+          <div class="n-icon">d</div>
+          <span class="n-app">donna</span>
+          <span class="n-time">now</span>
+        </div>
+        <div class="n-body">fare alert — SIN→YYZ just hit <b>S$774</b>, under your S$780 target. book it?</div>
+        <div class="n-actions">
+          <button class="n-btn n-yes">Book S$774</button>
+          <button class="n-btn n-no">Hold</button>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="ls-bottom">
+      <div class="ls-ctl"><svg viewBox="0 0 24 24"><path d="M9 18a4.5 4.5 0 0 0 0-9 5.5 5.5 0 0 0-10.7 1.5"/><path d="M9 18H7a5 5 0 0 1-1-9.9A5.5 5.5 0 0 1 16.5 9.5 4.5 4.5 0 0 1 16 18H9z"/></svg></div>
+      <div class="ls-ctl"><svg viewBox="0 0 24 24"><path d="M14 6.5a3.5 3.5 0 0 0-7 0v5a3.5 3.5 0 0 0 7 0z" transform="translate(1.5 0)"/><circle cx="12" cy="9" r="0" /><path d="M17 11.5a5 5 0 0 1-10 0M12 16.5V20" transform="translate(0 0)"/></svg></div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

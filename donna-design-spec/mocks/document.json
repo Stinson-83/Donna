@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "card_id": "c_b3e7",
+  "intent": "document",
+  "theme": "light",
+  "expires_at": null,
+  "blocks": [
+    { "type": "file", "name": "Proof_of_Funds_IRCC.pdf", "kind": "pdf", "meta": "2 pages · 184 KB · just now", "url": "donna://doc/b3e7", "downloadable": true },
+    { "type": "key_values", "rows": [
+      { "k": "Closing balance", "v": "S$31,240" },
+      { "k": "IRCC minimum", "v": "S$27,515" },
+      { "k": "Statement period", "v": "Mar – May 2026" }
+    ]}
+  ]
+}

@@ -188,13 +188,39 @@ async def _run_pipeline(phone: str, items: list[_DispatchItem]) -> None:
 
         state = state_from_payload(merged)
         state = await user_lookup(state)
+
+        # Card button tap → resolve through the card's action_map + §10.3 gate,
+        # not a chat turn. 'reopen' re-enters the BRAIN loop with a new prompt;
+        # 'handled'/'rejected' send a direct reply and skip the loop entirely.
+        reopen_prompt: str | None = None
+        if merged.card_action:
+            from backend.cards.resolution import resolve_card_action
+
+            res = await resolve_card_action(state["user_id"], merged.card_action)
+            if res.status == "reopen":
+                reopen_prompt = res.reopen_prompt
+            else:
+                if res.outbound:
+                    async with _lock_for(phone):
+                        _sending_phase[phone] = True
+                    await _wa.send_many(phone, res.outbound)
+                await mark_processed(row_ids)
+                return
+
         state = await enrich_state(state)
 
-        # Persist the user's inbound message before the brain runs so
-        # reply-resolution works for future turns.
-        await _save_user_message(
-            state["user_id"], state.get("raw_input") or "", merged.platform_message_id,
-        )
+        if reopen_prompt is not None:
+            # The tap's "message" is the button title; replace it with the
+            # action's prompt so the loop drafts/acts, and don't persist the
+            # synthetic prompt as a user chat message.
+            state["raw_input"] = reopen_prompt
+            state["user_message"] = reopen_prompt
+        else:
+            # Persist the user's inbound message before the brain runs so
+            # reply-resolution works for future turns.
+            await _save_user_message(
+                state["user_id"], state.get("raw_input") or "", merged.platform_message_id,
+            )
 
         try:
             state = await donna_turn(state)

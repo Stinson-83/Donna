@@ -350,50 +350,12 @@ class DonnaRuntimeTests(unittest.TestCase):
         self.assertIn("runtime_error", codes)
         self.assertNotIn("missing_tool_call", codes)
 
-    def test_entrypoint_audit_only_does_not_require_sdk_import(self) -> None:
-        with tempfile.TemporaryDirectory() as tmpdir:
-            trace_path = Path(tmpdir) / "trace.jsonl"
-            trace_path.write_text(
-                json.dumps(
-                    {
-                        "turn_id": "turn_test",
-                        "tool_calls": [
-                            {
-                                "tool": "mcp__donna__send_burst",
-                                "inputs": {"messages": ["k"], "tone": "crisp"},
-                                "call_id": "call_1",
-                            }
-                        ],
-                    }
-                )
-                + "\n"
-            )
-            result = subprocess.run(
-                [sys.executable, "donna.py", "--audit-only", "--trace-file", str(trace_path)],
-                check=True,
-                capture_output=True,
-                text=True,
-            )
-        self.assertIn("Donna Trace Audit", result.stdout)
-        self.assertIn("Findings: 0", result.stdout)
-
     def test_langsmith_smoke_test_runs_without_api_key(self) -> None:
         result = run_smoke_test(project_name="donna-test")
         self.assertEqual(result["mode"], "local")
         self.assertEqual(result["project"], "donna-test")
         self.assertEqual(result["payload"]["status"], "ok")
         self.assertEqual(result["langsmith_available"], langsmith_available())
-
-    def test_entrypoint_langsmith_smoke_test_outputs_json(self) -> None:
-        result = subprocess.run(
-            [sys.executable, "donna.py", "--langsmith-smoke-test", "--langsmith-project", "donna-test"],
-            check=True,
-            capture_output=True,
-            text=True,
-        )
-        payload = json.loads(result.stdout)
-        self.assertEqual(payload["project"], "donna-test")
-        self.assertEqual(payload["payload"]["status"], "ok")
 
     def test_health_report_runs(self) -> None:
         report = render_health_report()

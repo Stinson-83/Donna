@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "card_id": "c_3aa9",
+  "intent": "tracker",
+  "theme": "light",
+  "expires_at": null,
+  "blocks": [
+    { "type": "header", "label": "tracking", "ref": "checked hourly" },
+    { "type": "body", "text": "SIN → YYZ · one-way, Aug 28 · for the waterloo move" },
+    { "type": "graph", "points": [930, 921, 924, 905, 896, 902, 888, 871, 864, 870, 851, 843, 836, 829, 821, 818], "target": 780, "current_label": "S$818", "target_label": "buy under S$780", "delta_chip": { "text": "S$112 this week", "direction": "down", "good": true } },
+    { "type": "footer", "text": "30 days · dashed line is your target", "right": "she'll buy when it crosses" }
+  ]
+}

@@ -259,7 +259,11 @@ async def _parse_one(message: dict, value: dict) -> IngressPayload | None:
     if wa_type == "interactive":
         interactive = message.get("interactive", {})
         reply = interactive.get("button_reply") or interactive.get("list_reply") or {}
+        reply_id = reply.get("id") or ""
         text = reply.get("title", "")
+        # Card button ids are encoded "card_id:action_id" (backend.cards.projection).
+        # Capture it so a tap resolves through the action_map, not a chat turn.
+        card_action = reply_id if ":" in reply_id else None
         return IngressPayload(
             user_id="",
             phone=sender_phone,
@@ -269,6 +273,7 @@ async def _parse_one(message: dict, value: dict) -> IngressPayload | None:
             platform_message_id=wa_message_id,
             platform_profile_name=profile_name,
             reply_to_id=reply_to_id,
+            card_action=card_action,
         )
 
     # Unknown type — normalize as text with a note

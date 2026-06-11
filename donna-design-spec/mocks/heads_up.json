@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "card_id": "c_m2_sequoia",
+  "intent": "heads_up",
+  "theme": "dark",
+  "expires_at": "2026-04-18T18:00:00+08:00",
+  "blocks": [
+    { "type": "header", "label": "needs your eye", "ref": "Sequoia · term sheet" },
+    { "type": "body", "text": "sequoia replied to your thread. they want an answer by **EOD**, and the term sheet expires **tomorrow noon**." },
+    { "type": "key_values", "rows": [
+      { "k": "From", "v": "partner @ sequoia" },
+      { "k": "Thread", "v": "Series A term sheet" }
+    ]},
+    { "type": "actions", "actions": [
+      { "label": "Draft a reply", "action_id": "a_draft_reply_sequoia", "style": "primary" },
+      { "label": "Not now", "action_id": "a_dismiss", "style": "secondary" }
+    ]},
+    { "type": "footer", "text": "flagged from gmail · 8:42 AM", "right": "gmail" }
+  ]
+}

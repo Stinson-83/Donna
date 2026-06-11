@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Live — every state</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=EB+Garamond:wght@500;600&family=Red+Hat+Text:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#F6F1EA; --bg-deep:#EFE8DF; --surface:#FFFFFF;
+    --ink:#201A14; --ink-60:#6F665C; --ink-40:#A59B8F;
+    --border:rgba(63,46,35,0.08);
+    --accent:#7B5544; --espresso:#251D16;
+    --cream:#F3EBE1; --cream-60:rgba(243,235,225,0.62); --cream-40:rgba(243,235,225,0.4);
+    --copper:#C99A7E; --green:#3D7A4E;
+    --sans:'Red Hat Text',-apple-system,sans-serif;
+    --serif:'EB Garamond',Georgia,serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent}
+  body{
+    background:#CFC5B8;font-family:var(--sans);color:var(--ink);font-size:15px;
+    padding:28px 0 60px;
+  }
+  .gallery{display:flex;flex-direction:column;align-items:center;gap:44px}
+  .slide{display:flex;flex-direction:column;align-items:center;gap:14px}
+  .slide-label{
+    font-size:12px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#7A6E60;
+  }
+  .phone{
+    width:min(392px, 94vw);height:800px;
+    border-radius:42px;
+    background:radial-gradient(130% 55% at 50% -12%, #FCF8F2 0%, var(--bg) 55%, var(--bg-deep) 100%);
+    box-shadow:0 4px 10px rgba(40,28,18,0.12), 0 24px 60px rgba(40,28,18,0.22), inset 0 0 0 1px rgba(63,46,35,0.06);
+    overflow:hidden;display:flex;flex-direction:column;position:relative;
+  }
+
+  /* nav */
+  .nav{
+    flex-shrink:0;padding:24px 22px 12px;
+    display:flex;align-items:center;justify-content:space-between;
+    border-bottom:1px solid rgba(63,46,35,0.05);
+    background:rgba(248,243,236,0.7);
+    backdrop-filter:blur(20px) saturate(1.5);-webkit-backdrop-filter:blur(20px) saturate(1.5);
+    position:relative;z-index:5;
+  }
+  .nav-title{font-family:var(--serif);font-weight:600;font-size:28px;line-height:1;letter-spacing:-0.01em}
+  .status{
+    display:flex;align-items:center;gap:6px;height:28px;padding:0 11px;
+    background:var(--surface);border-radius:14px;
+    font-size:12px;font-weight:600;color:var(--ink-60);
+    box-shadow:0 1px 2px rgba(63,42,30,0.06),0 4px 10px rgba(63,42,30,0.05),inset 0 1px 0 #FFF;
+    border:1px solid var(--border);
+  }
+  .status::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 0 3px rgba(61,122,78,0.15)}
+
+  .feed{flex:1;overflow-y:auto;padding:22px 18px 14px}
+  .feed::-webkit-scrollbar{display:none}
+
+  .donna{font-size:16.5px;line-height:1.62;max-width:95%;margin-bottom:14px}
+  .donna strong{font-weight:700}
+  .gap{height:14px}
+  .gap-lg{height:26px}
+
+  .group-out{display:flex;flex-direction:column;align-items:flex-end;margin:22px 0}
+  .msg-out{
+    background:linear-gradient(180deg,#8A604E 0%,var(--accent) 60%,#6C4A3A 100%);
+    color:#FFF;border-radius:18px;border-bottom-right-radius:5px;
+    padding:11px 15px;line-height:1.5;max-width:84%;width:fit-content;
+    box-shadow:0 2px 6px rgba(101,68,53,0.28),0 10px 22px rgba(101,68,53,0.18),inset 0 1px 0 rgba(255,255,255,0.2);
+  }
+
+  /* dark hero card base */
+  .dark-card{
+    position:relative;border-radius:20px;overflow:hidden;color:var(--cream);
+    background:radial-gradient(140% 90% at 20% 0%, #3A2C20 0%, var(--espresso) 52%, #1B140E 100%);
+    box-shadow:0 2px 4px rgba(32,22,14,0.18),0 10px 24px rgba(32,22,14,0.22),0 30px 60px rgba(32,22,14,0.25),inset 0 1px 0 rgba(255,255,255,0.09);
+    transform:rotate(-0.4deg);
+  }
+  .grain::after{
+    content:'';position:absolute;inset:0;pointer-events:none;opacity:0.5;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.05 0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+  .dark-card > *{position:relative;z-index:1}
+  .dc-head{display:flex;align-items:center;justify-content:space-between;padding:15px 20px 12px}
+  .dc-label{display:flex;align-items:center;gap:7px;font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--copper)}
+  .dc-label::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--copper);box-shadow:0 0 8px rgba(201,154,126,0.8)}
+  .dc-ref{font-size:11px;font-weight:600;color:var(--cream-40);letter-spacing:0.05em}
+  .dc-rows{padding:2px 20px 6px}
+  .dc-row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;font-size:14px}
+  .dc-row .k{color:var(--cream-60);font-weight:500}
+  .dc-row .v{font-weight:700}
+  .dc-actions{display:flex;gap:9px;padding:12px 20px 20px}
+  .btn{height:48px;border-radius:14px;border:none;font-family:var(--sans);font-size:15px;font-weight:700;cursor:pointer}
+  .btn-cream{flex:1.5;color:var(--espresso);background:linear-gradient(180deg,#FBF6EE 0%,var(--cream) 100%);box-shadow:0 2px 6px rgba(0,0,0,0.3),inset 0 1px 0 #FFF}
+  .btn-ghost-dark{flex:1;background:rgba(243,235,225,0.07);color:var(--cream-60);border:1px solid rgba(243,235,225,0.16)}
+
+  .route{display:flex;align-items:flex-end;justify-content:space-between;padding:4px 20px 16px}
+  .pt{display:flex;flex-direction:column;gap:2px}
+  .pt.r{text-align:right}
+  .big{font-family:var(--serif);font-weight:600;font-size:38px;line-height:1;letter-spacing:-0.015em}
+  .big.old{font-size:26px;color:var(--cream-40);text-decoration:line-through;text-decoration-thickness:1.5px;text-decoration-color:rgba(201,154,126,0.7);margin-bottom:3px}
+  .big .sm{font-size:17px;font-weight:500;color:var(--cream-60);margin-left:2px}
+  .cap{font-size:11px;font-weight:600;color:var(--cream-40);letter-spacing:0.04em;text-transform:uppercase}
+  .dashline{flex:1;display:flex;align-items:center;margin:0 16px 14px}
+  .dashline::before{content:'';flex:1;height:1px;background:repeating-linear-gradient(90deg,rgba(243,235,225,0.3) 0 4px,transparent 4px 9px)}
+  .dashline::after{content:'';width:6px;height:6px;border-top:1.5px solid rgba(243,235,225,0.45);border-right:1.5px solid rgba(243,235,225,0.45);transform:rotate(45deg);margin-left:-6px}
+  .perf{position:relative;height:0;border-top:1.5px dashed rgba(243,235,225,0.14)}
+  .perf::before,.perf::after{content:'';position:absolute;top:-9px;width:18px;height:18px;border-radius:50%;background:var(--bg)}
+  .perf::before{left:-10px}
+  .perf::after{right:-10px}
+
+  /* light card */
+  .light-card{
+    background:linear-gradient(180deg,#FFFFFF 0%,#FDF9F5 100%);
+    border:1px solid var(--border);border-radius:18px;
+    box-shadow:0 1px 1px rgba(63,42,30,0.05),0 3px 6px rgba(63,42,30,0.05),0 10px 20px rgba(63,42,30,0.07),inset 0 1.5px 0 #FFF;
+    overflow:hidden;
+  }
+
+  /* settled */
+  .settled{
+    background:rgba(255,255,255,0.5);border:1px solid var(--border);border-radius:16px;
+    box-shadow:inset 0 1.5px 3px rgba(63,42,30,0.05);
+    display:flex;align-items:flex-start;gap:11px;padding:14px 16px;max-width:94%;transform:rotate(0.3deg);
+  }
+  .done-icon{width:22px;height:22px;border-radius:50%;flex-shrink:0;margin-top:1px;
+    background:linear-gradient(180deg,#4C9160,var(--green));
+    box-shadow:0 1px 3px rgba(61,122,78,0.35),inset 0 1px 0 rgba(255,255,255,0.3);
+    display:flex;align-items:center;justify-content:center}
+  .done-icon svg{width:10px;height:10px;stroke:#FFF;stroke-width:2.6;fill:none;stroke-linecap:round;stroke-linejoin:round}
+  .done-title{font-size:14.5px;font-weight:700;line-height:1.35}
+  .done-sub{font-size:13px;color:var(--ink-60);margin-top:3px;line-height:1.45}
+
+  /* working shimmer */
+  .working{display:flex;align-items:center;gap:9px;margin-top:18px}
+  .working span{font-size:13px;font-weight:600;
+    background:linear-gradient(90deg,var(--ink-40) 30%,var(--accent) 50%,var(--ink-40) 70%);
+    background-size:220% 100%;-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+    animation:shimmer 2.6s linear infinite}
+  @keyframes shimmer{from{background-position:200% 0}to{background-position:-20% 0}}
+  .wd{display:flex;gap:3px}
+  .wd i{width:4px;height:4px;border-radius:50%;background:var(--ink-40);animation:wd 1.2s ease-in-out infinite}
+  .wd i:nth-child(2){animation-delay:0.15s}
+  .wd i:nth-child(3){animation-delay:0.3s}
+  @keyframes wd{0%,100%{opacity:0.25}50%{opacity:1}}
+
+  /* composer + tabs */
+  .composer{
+    flex-shrink:0;display:flex;align-items:center;gap:9px;padding:10px 16px 12px;
+    background:rgba(248,243,236,0.82);
+    backdrop-filter:blur(20px) saturate(1.5);-webkit-backdrop-filter:blur(20px) saturate(1.5);
+    border-top:1px solid rgba(63,46,35,0.05);
+  }
+  .composer-field{
+    flex:1;height:47px;background:var(--surface);border:1px solid var(--border);border-radius:24px;
+    display:flex;align-items:center;justify-content:space-between;padding:0 8px 0 17px;
+    font-size:15px;color:var(--ink-40);
+    box-shadow:0 1px 2px rgba(63,42,30,0.05),0 4px 10px rgba(63,42,30,0.04),inset 0 1px 0 #FFF;
+  }
+  .in-actions{display:flex;align-items:center}
+  .icon-btn{width:34px;height:34px;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center}
+  .icon-btn svg{width:17px;height:17px;stroke:var(--ink-40);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+  .talk{
+    height:47px;padding:0 18px 0 14px;border-radius:24px;border:none;cursor:pointer;flex-shrink:0;
+    display:flex;align-items:center;gap:9px;
+    background:radial-gradient(120% 150% at 25% 0%, #3C2D20 0%, var(--espresso) 60%, #19120C 100%);
+    color:var(--cream);font-size:14.5px;font-weight:700;font-family:var(--sans);
+    box-shadow:0 2px 6px rgba(32,22,14,0.3),0 9px 20px rgba(32,22,14,0.25),inset 0 1px 0 rgba(255,255,255,0.12);
+  }
+  .eq{display:flex;align-items:center;gap:2.5px;height:16px}
+  .eq i{width:2.5px;border-radius:2px;background:var(--copper);animation:eqa 1.4s ease-in-out infinite}
+  .eq i:nth-child(1){height:7px}
+  .eq i:nth-child(2){height:14px;animation-delay:0.18s}
+  .eq i:nth-child(3){height:10px;animation-delay:0.36s}
+  .eq i:nth-child(4){height:15px;animation-delay:0.1s}
+  @keyframes eqa{0%,100%{transform:scaleY(1)}50%{transform:scaleY(0.45)}}
+  .tabs{flex-shrink:0;display:flex;background:rgba(248,243,236,0.94);border-top:1px solid rgba(63,46,35,0.05);padding:6px 0 14px}
+  .tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:4px 0;font-size:10.5px;font-weight:600;color:var(--ink-40)}
+  .tab svg{width:22px;height:22px;stroke:var(--ink-40);fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+  .tab.on{color:var(--accent)}
+  .tab.on svg{stroke:var(--accent)}
+
+  /* ── tracker card ── */
+  .trk-head{display:flex;align-items:center;justify-content:space-between;padding:14px 18px 4px}
+  .trk-label{font-size:11px;font-weight:700;letter-spacing:0.07em;text-transform:uppercase;color:var(--accent)}
+  .trk-freq{font-size:11px;font-weight:600;color:var(--ink-40)}
+  .trk-title{font-size:16px;font-weight:700;padding:4px 18px 14px}
+  .steps{padding:0 18px 14px;position:relative}
+  .step{display:flex;gap:12px;position:relative;padding-bottom:18px}
+  .step:last-child{padding-bottom:4px}
+  .step::before{
+    content:'';position:absolute;left:8px;top:20px;bottom:-2px;width:1.5px;
+    background:rgba(63,46,35,0.12);
+  }
+  .step:last-child::before{display:none}
+  .step-dot{
+    width:17px;height:17px;border-radius:50%;flex-shrink:0;margin-top:1px;z-index:1;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .step-dot.done{background:linear-gradient(180deg,#4C9160,var(--green));box-shadow:inset 0 1px 0 rgba(255,255,255,0.3)}
+  .step-dot.done svg{width:8px;height:8px;stroke:#FFF;stroke-width:3;fill:none;stroke-linecap:round;stroke-linejoin:round}
+  .step-dot.now{background:#FFF;border:2px solid var(--accent)}
+  .step-dot.now i{width:7px;height:7px;border-radius:50%;background:var(--accent);animation:wd 1.6s ease-in-out infinite}
+  .step-dot.next{background:#FFF;border:1.5px solid rgba(63,46,35,0.18)}
+  .step-name{font-size:14px;font-weight:700}
+  .step-name.dim{font-weight:500;color:var(--ink-40)}
+  .step-sub{font-size:12.5px;color:var(--ink-60);margin-top:2px}
+  .trk-foot{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:11px 18px;border-top:1px solid var(--border);
+    font-size:12px;font-weight:600;color:var(--ink-40);
+  }
+  .trk-foot b{color:var(--ink-60)}
+
+  /* ── integration card ── */
+  .int-top{display:flex;align-items:center;gap:13px;padding:17px 18px 13px}
+  .int-logo{
+    width:44px;height:44px;border-radius:13px;flex-shrink:0;
+    background:#FFF;border:1px solid var(--border);
+    box-shadow:0 1px 3px rgba(63,42,30,0.08);
+    display:flex;align-items:center;justify-content:center;
+  }
+  .int-name{font-size:16px;font-weight:700}
+  .int-sub{font-size:12.5px;color:var(--ink-60);margin-top:1px}
+  .scopes{padding:2px 18px 8px}
+  .scope{display:flex;align-items:center;gap:9px;padding:6px 0;font-size:13.5px;color:var(--ink-60)}
+  .scope svg{width:15px;height:15px;stroke:var(--green);stroke-width:2;fill:none;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
+  .int-actions{display:flex;gap:9px;padding:8px 18px 16px}
+  .btn-rust{flex:1.5;color:#FFF;background:linear-gradient(180deg,#8B6150 0%,var(--accent) 55%,#6B4839 100%);box-shadow:0 2px 5px rgba(101,68,53,0.35),0 8px 18px rgba(101,68,53,0.22),inset 0 1px 0 rgba(255,255,255,0.25)}
+  .btn-quiet{flex:1;background:rgba(255,255,255,0.6);color:var(--ink-60);border:1px solid var(--border)}
+  .int-note{padding:0 18px 15px;font-size:11.5px;color:var(--ink-40);display:flex;align-items:center;gap:6px}
+  .int-note svg{width:13px;height:13px;stroke:var(--ink-40);stroke-width:1.8;fill:none;stroke-linecap:round;stroke-linejoin:round}
+
+  /* ── documents & photos ── */
+  .photo-out{
+    border-radius:18px;border-bottom-right-radius:5px;overflow:hidden;max-width:68%;
+    box-shadow:0 2px 6px rgba(63,42,30,0.18),0 10px 24px rgba(63,42,30,0.16);
+    position:relative;
+  }
+  .photo-out .ph{
+    width:100%;aspect-ratio:4/3;display:block;
+    background:
+      linear-gradient(150deg, #B8A68E 0%, #8C7B65 45%, #5E5142 100%);
+    position:relative;
+  }
+  .ph-tag{
+    position:absolute;left:10px;bottom:10px;
+    font-size:10.5px;font-weight:700;color:rgba(255,255,255,0.92);
+    background:rgba(32,26,20,0.45);backdrop-filter:blur(6px);
+    padding:4px 9px;border-radius:9px;letter-spacing:0.03em;
+  }
+  .doc-card{
+    display:flex;align-items:center;gap:12px;padding:13px 15px;max-width:88%;
+  }
+  .doc-icon{
+    width:42px;height:42px;border-radius:12px;flex-shrink:0;
+    background:linear-gradient(180deg,#8B6150,var(--accent));
+    box-shadow:inset 0 1px 0 rgba(255,255,255,0.25);
+    display:flex;align-items:center;justify-content:center;
+  }
+  .doc-icon span{font-size:9.5px;font-weight:800;color:#FFF;letter-spacing:0.05em}
+  .doc-name{font-size:14px;font-weight:700;line-height:1.3;word-break:break-all}
+  .doc-meta{font-size:12px;color:var(--ink-60);margin-top:2px}
+  .doc-dl{
+    width:36px;height:36px;border-radius:50%;flex-shrink:0;margin-left:auto;
+    border:1px solid var(--border);background:var(--surface);cursor:pointer;
+    display:flex;align-items:center;justify-content:center;
+    box-shadow:0 1px 3px rgba(63,42,30,0.08);
+  }
+  .doc-dl svg{width:15px;height:15px;stroke:var(--accent);stroke-width:2;fill:none;stroke-linecap:round;stroke-linejoin:round}
+  .extract{padding:0 15px 13px}
+  .extract-rows{border-top:1px dashed var(--border);padding-top:10px;margin-top:2px}
+  .ex-row{display:flex;justify-content:space-between;padding:5px 0;font-size:13px}
+  .ex-row .k{color:var(--ink-60)}
+  .ex-row .v{font-weight:700}
+
+  /* ── voice session screen ── */
+  .call-screen{
+    position:absolute;inset:0;display:flex;flex-direction:column;color:var(--cream);
+    background:radial-gradient(120% 80% at 50% 0%, #38291C 0%, var(--espresso) 48%, #150F0A 100%);
+  }
+  .call-head{display:flex;align-items:center;justify-content:space-between;padding:26px 24px 0}
+  .call-name{font-family:var(--serif);font-weight:600;font-size:21px}
+  .call-timer{font-size:13px;font-weight:600;color:var(--cream-40);letter-spacing:0.06em;font-variant-numeric:tabular-nums}
+  .call-stage{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:30px;padding:0 32px}
+  .presence{position:relative;width:165px;height:165px;display:flex;align-items:center;justify-content:center}
+  .halo{position:absolute;inset:-26px;border-radius:50%;
+    background:radial-gradient(circle, rgba(201,154,126,0.22) 0%, transparent 65%);
+    animation:halo 4.5s ease-in-out infinite}
+  @keyframes halo{0%,100%{transform:scale(0.92);opacity:0.7}50%{transform:scale(1.08);opacity:1}}
+  .form{width:146px;height:146px;
+    background:linear-gradient(160deg,#F7EFE3 0%,#E2CDB8 55%,#C99A7E 130%);
+    border-radius:46% 54% 57% 43% / 49% 44% 56% 51%;
+    box-shadow:0 18px 50px rgba(0,0,0,0.4), inset 0 2px 6px rgba(255,255,255,0.6);
+    animation:morph 7s ease-in-out infinite}
+  @keyframes morph{
+    0%,100%{border-radius:46% 54% 57% 43% / 49% 44% 56% 51%;transform:rotate(0deg) scale(1)}
+    33%{border-radius:55% 45% 42% 58% / 45% 56% 44% 55%;transform:rotate(2deg) scale(1.03)}
+    66%{border-radius:43% 57% 52% 48% / 56% 45% 55% 44%;transform:rotate(-2deg) scale(0.98)}}
+  .call-state{font-size:12px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--copper)}
+  .caption{text-align:center;font-size:17px;line-height:1.55;color:var(--cream-60);max-width:300px}
+  .caption strong{color:var(--cream);font-weight:700}
+  .call-card{
+    margin:0 20px 14px;background:rgba(243,235,225,0.07);
+    border:1px solid rgba(243,235,225,0.14);border-radius:16px;
+    backdrop-filter:blur(8px);padding:14px 16px;
+    display:flex;align-items:center;justify-content:space-between;gap:12px;
+  }
+  .cc-label{font-size:10px;font-weight:700;letter-spacing:0.09em;text-transform:uppercase;color:var(--copper);margin-bottom:4px}
+  .cc-title{font-size:14.5px;font-weight:700;line-height:1.35}
+  .cc-btn{height:38px;padding:0 16px;border-radius:11px;border:none;cursor:pointer;flex-shrink:0;
+    background:linear-gradient(180deg,#FBF6EE 0%,var(--cream) 100%);
+    color:var(--espresso);font-family:var(--sans);font-size:13.5px;font-weight:700;
+    box-shadow:0 2px 6px rgba(0,0,0,0.3),inset 0 1px 0 #FFF}
+  .call-controls{display:flex;align-items:center;justify-content:center;gap:22px;padding:6px 0 30px}
+  .ctl{width:54px;height:54px;border-radius:50%;border:1px solid rgba(243,235,225,0.16);
+    background:rgba(243,235,225,0.07);cursor:pointer;display:flex;align-items:center;justify-content:center}
+  .ctl svg{width:20px;height:20px;stroke:var(--cream-60);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+  .ctl.end{width:62px;height:62px;border:none;
+    background:linear-gradient(180deg,#C05A45,#A8462F);
+    box-shadow:0 4px 14px rgba(168,70,47,0.45),inset 0 1px 0 rgba(255,255,255,0.25)}
+  .ctl.end svg{stroke:#FFF}
+  .live-cap{
+    text-align:center;font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;
+    color:var(--cream-40);padding-bottom:8px;
+  }
+
+  /* all clear */
+  .clear-stage{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:0 40px;text-align:center}
+  .clear-mark{
+    width:54px;height:54px;border-radius:50%;
+    background:rgba(255,255,255,0.65);border:1px solid var(--border);
+    box-shadow:0 1px 3px rgba(63,42,30,0.06),inset 0 1px 0 #FFF;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .clear-mark svg{width:22px;height:22px;stroke:var(--green);stroke-width:2;fill:none;stroke-linecap:round;stroke-linejoin:round}
+  .clear-title{font-family:var(--serif);font-weight:600;font-size:24px}
+  .clear-sub{font-size:14px;color:var(--ink-60);line-height:1.6;max-width:250px}
+  .clear-sub b{color:var(--ink);font-weight:700}
+
+  @media (prefers-reduced-motion:reduce){
+    .wd i,.eq i,.step-dot.now i{animation:none}
+    .working span{animation:none;-webkit-text-fill-color:var(--ink-40)}
+    .form,.halo{animation:none}
+  }
+</style>
+</head>
+<body>
+
+<div class="gallery">
+
+<!-- ════ 1 · PROACTIVE, WAITING ════ -->
+<div class="slide">
+  <div class="slide-label">1 · Proactive — waiting for you</div>
+  <div class="phone">
+    <nav class="nav"><h1 class="nav-title">Live</h1><div class="status">Active</div></nav>
+    <main class="feed">
+      <p class="donna">your <strong>SQ516</strong> landing moved to <strong>9:40 PM</strong>. the pickup with aniroodh still says 6:30, so he'd be waiting almost three hours.</p>
+      <div class="dark-card grain">
+        <div class="dc-head"><span class="dc-label">Needs your approval</span><span class="dc-ref">SQ516 · T3</span></div>
+        <div class="route">
+          <div class="pt"><span class="big old">6:30</span><span class="cap">current</span></div>
+          <div class="dashline"></div>
+          <div class="pt r"><span class="big">8:45<span class="sm">PM</span></span><span class="cap">proposed</span></div>
+        </div>
+        <div class="perf"></div>
+        <div class="dc-rows">
+          <div class="dc-row"><span class="k">Notifies</span><span class="v">Aniroodh</span></div>
+          <div class="dc-row"><span class="k">Buffer after landing</span><span class="v">35 min</span></div>
+        </div>
+        <div class="dc-actions">
+          <button class="btn btn-cream">Approve</button>
+          <button class="btn btn-ghost-dark">Not now</button>
+        </div>
+      </div>
+      <div class="working"><div class="wd"><i></i><i></i><i></i></div><span>Holding this until you decide</span></div>
+    </main>
+    <div class="composer">
+      <div class="composer-field">Message<span class="in-actions">
+        <button class="icon-btn"><svg viewBox="0 0 24 24"><path d="M21 12.5l-8.5 8.5a5.6 5.6 0 0 1-8-8L13 4.5a3.7 3.7 0 0 1 5.3 5.3L10 18a1.9 1.9 0 0 1-2.7-2.7L15 7.5"/></svg></button>
+        <button class="icon-btn"><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><line x1="12" y1="18" x2="12" y2="21"/></svg></button>
+      </span></div>
+      <button class="talk"><span class="eq"><i></i><i></i><i></i><i></i></span>Talk</button>
+    </div>
+    <nav class="tabs">
+      <div class="tab"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>Dashboard</div>
+      <div class="tab on"><svg viewBox="0 0 24 24"><path d="M21 11.5a8.4 8.4 0 0 1-8.5 8.3 8.8 8.8 0 0 1-3.9-.9L3 20l1.2-5.3a8 8 0 0 1-.7-3.2A8.4 8.4 0 0 1 12 3.2a8.4 8.4 0 0 1 9 8.3z"/></svg>Live</div>
+      <div class="tab"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6.5 8-6.5s8 2.5 8 6.5"/></svg>Me</div>
+    </nav>
+  </div>
+</div>
+
+<!-- ════ 2 · TRACKER JIT ════ -->
+<div class="slide">
+  <div class="slide-label">2 · Just-in-time tracker</div>
+  <div class="phone">
+    <nav class="nav"><h1 class="nav-title">Live</h1><div class="status">Active</div></nav>
+    <main class="feed">
+      <div class="group-out"><div class="msg-out">where's my waterloo permit at</div></div>
+      <p class="donna">still at <strong>biometrics</strong>. here's where it stands.</p>
+      <div class="light-card" style="transform:rotate(-0.3deg)">
+        <div class="trk-head"><span class="trk-label">Tracking</span><span class="trk-freq">checks daily · 9 AM</span></div>
+        <div class="trk-title">Canada study permit · Waterloo SEP</div>
+        <div class="steps">
+          <div class="step">
+            <div class="step-dot done"><svg viewBox="0 0 12 12"><path d="M2.5 6.5 L5 9 L9.5 3.5"/></svg></div>
+            <div><div class="step-name">Application submitted</div><div class="step-sub">May 28 · IRCC confirmed</div></div>
+          </div>
+          <div class="step">
+            <div class="step-dot done"><svg viewBox="0 0 12 12"><path d="M2.5 6.5 L5 9 L9.5 3.5"/></svg></div>
+            <div><div class="step-name">Biometrics letter issued</div><div class="step-sub">Jun 9 · appointment needed within 30 days</div></div>
+          </div>
+          <div class="step">
+            <div class="step-dot now"><i></i></div>
+            <div><div class="step-name">Biometrics appointment</div><div class="step-sub">VFS Singapore · earliest slot Jun 16, 10:30 AM</div></div>
+          </div>
+          <div class="step">
+            <div class="step-dot next"></div>
+            <div><div class="step-name dim">Decision</div><div class="step-sub">typical wait after biometrics: 4–7 weeks</div></div>
+          </div>
+        </div>
+        <div class="dc-actions" style="padding:0 18px 16px">
+          <button class="btn btn-rust">Book Jun 16 slot</button>
+          <button class="btn btn-quiet">Later</button>
+        </div>
+        <div class="trk-foot"><span>last checked <b>9:02 AM</b></span><span>portal · IRCC</span></div>
+      </div>
+    </main>
+    <div class="composer">
+      <div class="composer-field">Message<span class="in-actions">
+        <button class="icon-btn"><svg viewBox="0 0 24 24"><path d="M21 12.5l-8.5 8.5a5.6 5.6 0 0 1-8-8L13 4.5a3.7 3.7 0 0 1 5.3 5.3L10 18a1.9 1.9 0 0 1-2.7-2.7L15 7.5"/></svg></button>
+        <button class="icon-btn"><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><line x1="12" y1="18" x2="12" y2="21"/></svg></button>
+      </span></div>
+      <button class="talk"><span class="eq"><i></i><i></i><i></i><i></i></span>Talk</button>
+    </div>
+    <nav class="tabs">
+      <div class="tab"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>Dashboard</div>
+      <div class="tab on"><svg viewBox="0 0 24 24"><path d="M21 11.5a8.4 8.4 0 0 1-8.5 8.3 8.8 8.8 0 0 1-3.9-.9L3 20l1.2-5.3a8 8 0 0 1-.7-3.2A8.4 8.4 0 0 1 12 3.2a8.4 8.4 0 0 1 9 8.3z"/></svg>Live</div>
+      <div class="tab"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6.5 8-6.5s8 2.5 8 6.5"/></svg>Me</div>
+    </nav>
+  </div>
+</div>
+
+<!-- ════ 3 · INTEGRATION CONNECT ════ -->
+<div class="slide">
+  <div class="slide-label">3 · Connecting an integration</div>
+  <div class="phone">
+    <nav class="nav"><h1 class="nav-title">Live</h1><div class="status">Active</div></nav>
+    <main class="feed">
+      <div class="group-out"><div class="msg-out">can you watch my inbox for the IRCC email</div></div>
+      <p class="donna">i can, but i can't see your inbox yet. connect gmail and i'll watch it for you.</p>
+      <div class="light-card" style="transform:rotate(-0.3deg)">
+        <div class="int-top">
+          <div class="int-logo">
+            <svg width="22" height="22" viewBox="0 0 24 24"><path fill="#EA4335" d="M5.3 18.5H3.6c-.9 0-1.6-.7-1.6-1.6V7.4l3.3 2.6v8.5z"/><path fill="#4285F4" d="M18.7 18.5h1.7c.9 0 1.6-.7 1.6-1.6V7.4l-3.3 2.6v8.5z"/><path fill="#FBBC04" d="M2 7.4V6.1c0-1.3 1.5-2.1 2.6-1.3L5.3 5.4 12 10.4l6.7-5 .7-.6c1-.8 2.6 0 2.6 1.3v1.3L12 14.9 2 7.4z" opacity="0.9"/><path fill="#34A853" d="M12 14.9 5.3 9.9v8.6z" opacity="0"/></svg>
+          </div>
+          <div>
+            <div class="int-name">Gmail</div>
+            <div class="int-sub">arnav@cadence.sg</div>
+          </div>
+        </div>
+        <div class="scopes">
+          <div class="scope"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>Read incoming mail to spot what matters</div>
+          <div class="scope"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>Never sends or deletes anything</div>
+          <div class="scope"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>Drafts only appear here for your approval</div>
+        </div>
+        <div class="int-actions">
+          <button class="btn btn-rust">Connect Gmail</button>
+          <button class="btn btn-quiet">Not now</button>
+        </div>
+        <div class="int-note">
+          <svg viewBox="0 0 24 24"><rect x="4" y="10" width="16" height="11" rx="2.5"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+          read-only · disconnect anytime from Me
+        </div>
+      </div>
+    </main>
+    <div class="composer">
+      <div class="composer-field">Message<span class="in-actions">
+        <button class="icon-btn"><svg viewBox="0 0 24 24"><path d="M21 12.5l-8.5 8.5a5.6 5.6 0 0 1-8-8L13 4.5a3.7 3.7 0 0 1 5.3 5.3L10 18a1.9 1.9 0 0 1-2.7-2.7L15 7.5"/></svg></button>
+        <button class="icon-btn"><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><line x1="12" y1="18" x2="12" y2="21"/></svg></button>
+      </span></div>
+      <button class="talk"><span class="eq"><i></i><i></i><i></i><i></i></span>Talk</button>
+    </div>
+    <nav class="tabs">
+      <div class="tab"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>Dashboard</div>
+      <div class="tab on"><svg viewBox="0 0 24 24"><path d="M21 11.5a8.4 8.4 0 0 1-8.5 8.3 8.8 8.8 0 0 1-3.9-.9L3 20l1.2-5.3a8 8 0 0 1-.7-3.2A8.4 8.4 0 0 1 12 3.2a8.4 8.4 0 0 1 9 8.3z"/></svg>Live</div>
+      <div class="tab"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6.5 8-6.5s8 2.5 8 6.5"/></svg>Me</div>
+    </nav>
+  </div>
+</div>
+
+<!-- ════ 4 · LIVE VOICE SESSION ════ -->
+<div class="slide">
+  <div class="slide-label">4 · Real-time voice — in session</div>
+  <div class="phone">
+    <div class="call-screen grain">
+      <div class="call-head"><div class="call-name">donna</div><div class="call-timer">01:24</div></div>
+      <div class="call-stage">
+        <div class="presence"><div class="halo"></div><div class="form"></div></div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:14px">
+          <div class="call-state">Speaking</div>
+          <p class="caption">"your evening is clear after the pickup. want me to book <strong>atlas</strong> for you and aniroodh at 9:30?"</p>
+        </div>
+      </div>
+      <div class="call-card">
+        <div>
+          <div class="cc-label">While you talk</div>
+          <div class="cc-title">Atlas Bar · table for 2 · 9:30 PM</div>
+        </div>
+        <button class="cc-btn">Book it</button>
+      </div>
+      <div class="call-controls">
+        <button class="ctl"><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><line x1="12" y1="18" x2="12" y2="21"/><line x1="4" y1="4" x2="20" y2="20"/></svg></button>
+        <button class="ctl end"><svg viewBox="0 0 24 24" style="transform:rotate(135deg)"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3-8.6A2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 2 .7 2.9a2 2 0 0 1-.5 2.1L8 10a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.5c.9.3 1.9.6 2.9.7a2 2 0 0 1 1.7 2z"/></svg></button>
+        <button class="ctl"><svg viewBox="0 0 24 24"><path d="M4 5h16v10H8l-4 4z"/></svg></button>
+      </div>
+      <div class="live-cap">she keeps working after you hang up</div>
+    </div>
+  </div>
+</div>
+
+<!-- ════ 5 · DOCUMENTS & PHOTOS ════ -->
+<div class="slide">
+  <div class="slide-label">5 · Documents in, documents out</div>
+  <div class="phone">
+    <nav class="nav"><h1 class="nav-title">Live</h1><div class="status">Active</div></nav>
+    <main class="feed">
+      <div class="group-out">
+        <div class="photo-out">
+          <div class="ph"><span class="ph-tag">IMG_4471 · bank statement</span></div>
+        </div>
+      </div>
+      <div class="group-out" style="margin-top:-12px">
+        <div class="msg-out">need this in the proof of funds format for the permit</div>
+      </div>
+      <p class="donna">read it. balance is <strong>S$31,240</strong>, which clears the requirement with room. here's the formatted proof.</p>
+      <div class="light-card" style="transform:rotate(-0.3deg);max-width:94%">
+        <div class="doc-card">
+          <div class="doc-icon"><span>PDF</span></div>
+          <div>
+            <div class="doc-name">Proof_of_Funds_IRCC.pdf</div>
+            <div class="doc-meta">2 pages · 184 KB · just now</div>
+          </div>
+          <button class="doc-dl"><svg viewBox="0 0 24 24"><path d="M12 4v11M7 11l5 5 5-5"/><path d="M5 20h14"/></svg></button>
+        </div>
+        <div class="extract">
+          <div class="extract-rows">
+            <div class="ex-row"><span class="k">Closing balance</span><span class="v">S$31,240</span></div>
+            <div class="ex-row"><span class="k">IRCC minimum</span><span class="v">S$27,515</span></div>
+            <div class="ex-row"><span class="k">Statement period</span><span class="v">Mar – May 2026</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="gap"></div>
+      <div class="settled">
+        <div class="done-icon"><svg viewBox="0 0 12 12"><path d="M2 6.5 L4.8 9.2 L10 3"/></svg></div>
+        <div>
+          <div class="done-title">Filed to your permit folder</div>
+          <div class="done-sub">Drive · SEP 2026 / IRCC documents</div>
+        </div>
+      </div>
+    </main>
+    <div class="composer">
+      <div class="composer-field">Message<span class="in-actions">
+        <button class="icon-btn"><svg viewBox="0 0 24 24"><path d="M21 12.5l-8.5 8.5a5.6 5.6 0 0 1-8-8L13 4.5a3.7 3.7 0 0 1 5.3 5.3L10 18a1.9 1.9 0 0 1-2.7-2.7L15 7.5"/></svg></button>
+        <button class="icon-btn"><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><line x1="12" y1="18" x2="12" y2="21"/></svg></button>
+      </span></div>
+      <button class="talk"><span class="eq"><i></i><i></i><i></i><i></i></span>Talk</button>
+    </div>
+    <nav class="tabs">
+      <div class="tab"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>Dashboard</div>
+      <div class="tab on"><svg viewBox="0 0 24 24"><path d="M21 11.5a8.4 8.4 0 0 1-8.5 8.3 8.8 8.8 0 0 1-3.9-.9L3 20l1.2-5.3a8 8 0 0 1-.7-3.2A8.4 8.4 0 0 1 12 3.2a8.4 8.4 0 0 1 9 8.3z"/></svg>Live</div>
+      <div class="tab"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6.5 8-6.5s8 2.5 8 6.5"/></svg>Me</div>
+    </nav>
+  </div>
+</div>
+
+<!-- ════ 6 · ALL CLEAR ════ -->
+<div class="slide">
+  <div class="slide-label">6 · All clear — nothing needs you</div>
+  <div class="phone">
+    <nav class="nav"><h1 class="nav-title">Live</h1><div class="status">Active</div></nav>
+    <div class="clear-stage">
+      <div class="clear-mark"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></div>
+      <div class="clear-title">nothing needs you</div>
+      <p class="clear-sub">holding <b>23 things</b> · watching <b>7</b><br>next check: waterloo portal, 9 AM</p>
+    </div>
+    <div class="composer">
+      <div class="composer-field">Message<span class="in-actions">
+        <button class="icon-btn"><svg viewBox="0 0 24 24"><path d="M21 12.5l-8.5 8.5a5.6 5.6 0 0 1-8-8L13 4.5a3.7 3.7 0 0 1 5.3 5.3L10 18a1.9 1.9 0 0 1-2.7-2.7L15 7.5"/></svg></button>
+        <button class="icon-btn"><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><line x1="12" y1="18" x2="12" y2="21"/></svg></button>
+      </span></div>
+      <button class="talk"><span class="eq"><i></i><i></i><i></i><i></i></span>Talk</button>
+    </div>
+    <nav class="tabs">
+      <div class="tab"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>Dashboard</div>
+      <div class="tab on"><svg viewBox="0 0 24 24"><path d="M21 11.5a8.4 8.4 0 0 1-8.5 8.3 8.8 8.8 0 0 1-3.9-.9L3 20l1.2-5.3a8 8 0 0 1-.7-3.2A8.4 8.4 0 0 1 12 3.2a8.4 8.4 0 0 1 9 8.3z"/></svg>Live</div>
+      <div class="tab"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6.5 8-6.5s8 2.5 8 6.5"/></svg>Me</div>
+    </nav>
+  </div>
+</div>
+
+</div>
+</body>
+</html>

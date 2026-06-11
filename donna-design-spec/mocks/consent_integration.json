@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "card_id": "c_77b2",
+  "intent": "consent_integration",
+  "theme": "light",
+  "expires_at": null,
+  "blocks": [
+    { "type": "scopes", "service": "gmail", "account": "arnav@cadence.sg", "items": [
+      "Read incoming mail to spot what matters",
+      "Never sends or deletes anything",
+      "Drafts only appear here for your approval"
+    ], "note": "read-only · disconnect anytime from Me" },
+    { "type": "actions", "actions": [
+      { "label": "Connect Gmail", "action_id": "a_oauth_gmail", "style": "primary" },
+      { "label": "Not now", "action_id": "a_dismiss", "style": "secondary" }
+    ]}
+  ]
+}

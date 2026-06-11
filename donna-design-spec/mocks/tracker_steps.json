@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "card_id": "c_51c8",
+  "intent": "tracker",
+  "theme": "light",
+  "expires_at": null,
+  "blocks": [
+    { "type": "header", "label": "tracking", "ref": "checks daily · 9 AM" },
+    { "type": "body", "text": "canada study permit · waterloo SEP" },
+    { "type": "steps", "steps": [
+      { "name": "Application submitted", "sub": "May 28 · IRCC confirmed", "state": "done" },
+      { "name": "Biometrics letter issued", "sub": "Jun 9 · appointment within 30 days", "state": "done" },
+      { "name": "Biometrics appointment", "sub": "VFS Singapore · earliest slot Jun 16, 10:30 AM", "state": "now" },
+      { "name": "Decision", "sub": "typical wait after biometrics: 4–7 weeks", "state": "next" }
+    ]},
+    { "type": "actions", "actions": [
+      { "label": "Book Jun 16 slot", "action_id": "a_book_vfs_0616", "style": "primary" },
+      { "label": "Later", "action_id": "a_dismiss", "style": "secondary" }
+    ]},
+    { "type": "footer", "text": "last checked 9:02 AM", "right": "portal · IRCC" }
+  ]
+}

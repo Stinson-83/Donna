@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "card_id": "c_m2_send",
+  "intent": "approval",
+  "theme": "dark",
+  "expires_at": "2026-04-18T18:00:00+08:00",
+  "blocks": [
+    { "type": "header", "label": "send this?", "ref": "to sequoia" },
+    { "type": "body", "text": "\"thanks for the term sheet, we're keen. can we take **48 hours** to review with the team and come back?\"" },
+    { "type": "actions", "actions": [
+      { "label": "Send", "action_id": "a_send_reply_sequoia", "style": "primary" },
+      { "label": "Edit", "action_id": "a_edit_reply_sequoia", "style": "secondary" }
+    ]},
+    { "type": "footer", "text": "won't send until you tap send · reply to the Series A thread", "right": "gmail" }
+  ]
+}

@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any
 
 
-TERMINATOR_TOOL_SUFFIXES = ("send_burst",)
+TERMINATOR_TOOL_SUFFIXES = ("send_burst", "render_card")
 
 # Rates per 1M tokens (USD). Input / Output / CacheWrite5m / CacheRead.
 _MODEL_RATES: dict[str, tuple[float, float, float, float]] = {

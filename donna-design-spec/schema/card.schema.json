@@ -1,0 +1,165 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "donna://schema/card/v1",
+  "title": "DonnaCard",
+  "description": "The closed block vocabulary. Donna (the model) emits this payload via the render_card tool; the client renders it with the hand-built <Card blocks={...}/> renderer. Components are never generated. If validation fails, the backend falls back to a plain text message — never a broken card.",
+  "type": "object",
+  "required": ["version", "card_id", "intent", "theme", "blocks"],
+  "properties": {
+    "version": { "const": 1 },
+    "card_id": { "type": "string", "description": "uuid, stable across surfaces so actions resolve everywhere" },
+    "intent": {
+      "type": "string",
+      "enum": ["approval", "confirmation", "tracker", "consent_integration", "document", "heads_up", "options", "info"],
+      "description": "Why this card exists. Drives theme defaults and surface projection priority."
+    },
+    "theme": {
+      "type": "string",
+      "enum": ["dark", "light", "settled"],
+      "description": "dark = Donna-initiated / needs the user (espresso, grain, tilt -0.4deg). light = informational raised. settled = resolved, sunk, tilt +0.3deg. Rule of thumb: approval+proactive => dark, tracker/info => light, confirmation => settled."
+    },
+    "expires_at": { "type": ["string", "null"], "format": "date-time" },
+    "blocks": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 8,
+      "items": { "$ref": "#/$defs/Block" }
+    }
+  },
+  "$defs": {
+    "Block": {
+      "oneOf": [
+        { "$ref": "#/$defs/Header" }, { "$ref": "#/$defs/Body" },
+        { "$ref": "#/$defs/Delta" }, { "$ref": "#/$defs/KeyValues" },
+        { "$ref": "#/$defs/Steps" }, { "$ref": "#/$defs/Scopes" },
+        { "$ref": "#/$defs/File" }, { "$ref": "#/$defs/Graph" },
+        { "$ref": "#/$defs/Actions" }, { "$ref": "#/$defs/Footer" }
+      ]
+    },
+    "Header": {
+      "type": "object", "required": ["type", "label"],
+      "properties": {
+        "type": { "const": "header" },
+        "label": { "type": "string", "maxLength": 28, "description": "mono-caps eyebrow: 'needs your approval', 'tracking', 'done'" },
+        "ref": { "type": ["string", "null"], "maxLength": 24, "description": "right-side reference: 'SQ516 · T3'" }
+      }
+    },
+    "Body": {
+      "type": "object", "required": ["type", "text"],
+      "properties": {
+        "type": { "const": "body" },
+        "text": { "type": "string", "maxLength": 200, "description": "Donna voice: lowercase, no em dashes, no exclamation marks, max one question. **bold** marks facts." }
+      }
+    },
+    "Delta": {
+      "type": "object", "required": ["type", "to"],
+      "properties": {
+        "type": { "const": "delta" },
+        "from": { "type": ["string", "null"], "description": "struck-through old value, Garamond numerals" },
+        "to": { "type": "string", "description": "the new/current value, hero Garamond numerals" },
+        "from_caption": { "type": ["string", "null"], "maxLength": 16 },
+        "to_caption": { "type": ["string", "null"], "maxLength": 16 },
+        "kind": { "type": "string", "enum": ["time", "money", "count", "text"], "default": "text" }
+      }
+    },
+    "KeyValues": {
+      "type": "object", "required": ["type", "rows"],
+      "properties": {
+        "type": { "const": "key_values" },
+        "rows": {
+          "type": "array", "minItems": 1, "maxItems": 4,
+          "items": {
+            "type": "object", "required": ["k", "v"],
+            "properties": {
+              "k": { "type": "string", "maxLength": 24 },
+              "v": { "type": "string", "maxLength": 32 },
+              "strike": { "type": ["string", "null"], "description": "old value shown struck before v" }
+            }
+          }
+        }
+      }
+    },
+    "Steps": {
+      "type": "object", "required": ["type", "steps"],
+      "properties": {
+        "type": { "const": "steps" },
+        "steps": {
+          "type": "array", "minItems": 2, "maxItems": 6,
+          "items": {
+            "type": "object", "required": ["name", "state"],
+            "properties": {
+              "name": { "type": "string", "maxLength": 40 },
+              "sub": { "type": ["string", "null"], "maxLength": 64 },
+              "state": { "type": "string", "enum": ["done", "now", "next"] }
+            }
+          }
+        }
+      }
+    },
+    "Scopes": {
+      "type": "object", "required": ["type", "items"],
+      "properties": {
+        "type": { "const": "scopes" },
+        "service": { "type": ["string", "null"], "description": "service key for logo lookup: 'gmail', 'gcal', 'drive'" },
+        "account": { "type": ["string", "null"] },
+        "items": { "type": "array", "minItems": 1, "maxItems": 4, "items": { "type": "string", "maxLength": 64 } },
+        "note": { "type": ["string", "null"], "maxLength": 48, "description": "trust footer: 'read-only · disconnect anytime'" }
+      }
+    },
+    "File": {
+      "type": "object", "required": ["type", "name", "kind"],
+      "properties": {
+        "type": { "const": "file" },
+        "name": { "type": "string" },
+        "kind": { "type": "string", "enum": ["pdf", "image", "doc", "sheet"] },
+        "meta": { "type": ["string", "null"], "description": "'2 pages · 184 KB'" },
+        "url": { "type": ["string", "null"] },
+        "downloadable": { "type": "boolean", "default": true }
+      }
+    },
+    "Graph": {
+      "type": "object", "required": ["type", "points"],
+      "properties": {
+        "type": { "const": "graph" },
+        "points": { "type": "array", "minItems": 4, "maxItems": 90, "items": { "type": "number" } },
+        "target": { "type": ["number", "null"], "description": "renders as dashed trigger line" },
+        "current_label": { "type": ["string", "null"], "description": "hero numeral: 'S$818'" },
+        "target_label": { "type": ["string", "null"], "description": "'buy under S$780'" },
+        "delta_chip": {
+          "type": ["object", "null"],
+          "properties": {
+            "text": { "type": "string", "maxLength": 20 },
+            "direction": { "type": "string", "enum": ["up", "down"] },
+            "good": { "type": "boolean", "description": "green if true regardless of direction" }
+          }
+        }
+      }
+    },
+    "Actions": {
+      "type": "object", "required": ["type", "actions"],
+      "properties": {
+        "type": { "const": "actions" },
+        "actions": {
+          "type": "array", "minItems": 1, "maxItems": 2,
+          "description": "Max two. Primary first. Labels are verbs: 'Approve', 'Book it', 'Connect Gmail'.",
+          "items": {
+            "type": "object", "required": ["label", "action_id", "style"],
+            "properties": {
+              "label": { "type": "string", "maxLength": 18 },
+              "action_id": { "type": "string", "description": "opaque id resolved by backend; same id works from app, notification, or island" },
+              "style": { "type": "string", "enum": ["primary", "secondary"] }
+            }
+          }
+        }
+      }
+    },
+    "Footer": {
+      "type": "object", "required": ["type", "text"],
+      "properties": {
+        "type": { "const": "footer" },
+        "text": { "type": "string", "maxLength": 80, "description": "the proof line: 'last checked 9:02 AM · IRCC', 'she'll buy when it crosses'" },
+        "right": { "type": ["string", "null"], "maxLength": 32 }
+      }
+    }
+  }
+}

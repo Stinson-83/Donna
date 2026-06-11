@@ -21,6 +21,7 @@ _FACT_KEY_DESCRIPTION = (
 from .hooks import (
     _CURRENT_TRACE,
     _CURRENT_USER_ID,
+    _OUTBOUND_BUFFER,
     _fire_memory_hooks,
     set_image_prompt_hash,
 )
@@ -1686,6 +1687,232 @@ async def send_burst(args):
     return result
 
 
+async def _cognition_key(uid: str) -> str:
+    """The cognition store (beliefs/observations the app reads) is keyed on the
+    stable app id == User.phone, but a tool only sees the resolved User.id. Map
+    id -> phone so beliefs the BRAIN forms land where the app reads them. One
+    mind, one keyspace. Falls back to uid if no row matches (e.g. WhatsApp)."""
+    try:
+        from sqlalchemy import select
+        from db.models import User
+        from db.session import async_session
+
+        async with async_session() as s:
+            row = await s.execute(select(User).where((User.id == uid) | (User.phone == uid)))
+            u = row.scalar_one_or_none()
+            return u.phone if u else uid
+    except Exception:
+        logger.exception("form_belief: cognition key lookup failed; using uid")
+        return uid
+
+
+@tool(
+    "form_belief",
+    (
+        "Record a conclusion about the user as a belief, with the evidence "
+        "behind it. This is how your understanding of the person compounds — "
+        "it writes into the same model the app's Beliefs/Memory screens show, "
+        "across both WhatsApp and the app. "
+        "WHEN TO USE: the conversation revealed something true and durable about "
+        "them — a pattern ('skips the gym when work spikes'), a preference, a "
+        "value, a recurring tension, a relationship dynamic. Pass the specific "
+        "evidence you just saw AND the general belief it implies. Reuse the same "
+        "`subject` key for the same topic so repeated evidence strengthens (or "
+        "revises) one belief instead of spawning duplicates. "
+        "WHEN NOT TO USE: small talk, one-off facts with no pattern, transient "
+        "states ('tired today'), anything the user only asked ABOUT (a weather "
+        "or trivia question is not a belief about them). Do not call more than "
+        "once per genuine conclusion. Do not narrate it to the user — form the "
+        "belief, then reply normally."
+    ),
+    {
+        "type": "object",
+        "required": ["subject", "observation", "belief"],
+        "properties": {
+            "subject": {
+                "type": "string",
+                "description": "Stable snake_case key for the belief topic, e.g. 'work_stress', 'exercise_habit', 'priya_trust'. Reuse across turns for the same topic.",
+            },
+            "observation": {
+                "type": "string",
+                "description": "The specific evidence you just observed, in one line ('skipped the gym 3 nights, blamed a brutal work week').",
+            },
+            "belief": {
+                "type": "string",
+                "description": "The general claim this evidence implies ('you deprioritize exercise when work intensifies').",
+            },
+            "polarity": {
+                "type": "string",
+                "description": "'support' (default) if the evidence backs the belief, 'contradict' if it cuts against it.",
+            },
+            "confidence": {
+                "type": "string",
+                "description": "How strong this single piece of evidence is: low, medium (default), or high.",
+            },
+            "topics": {
+                "type": "array",
+                "items": {"type": "string"},
+                "description": "Optional tags for the graph, e.g. ['work', 'health'].",
+            },
+        },
+    },
+)
+@traceable(name="donna.tool.form_belief", run_type="tool")
+async def form_belief(args):
+    uid = _current_user_id()
+    if not uid:
+        return text_content("belief not formed: no user in scope (runtime bug, just reply).")
+    subject = str(args.get("subject") or "").strip().lower().replace(" ", "_")
+    observation = str(args.get("observation") or "").strip()
+    belief = str(args.get("belief") or "").strip()
+    if not (subject and observation and belief):
+        return text_content("belief not formed: subject, observation, and belief are all required.")
+    polarity = str(args.get("polarity") or "support").strip().lower()
+    if polarity not in ("support", "contradict"):
+        polarity = "support"
+    conf = str(args.get("confidence") or "medium").strip().lower()
+    source_quality = {"low": 0.55, "medium": 0.7, "high": 0.85}.get(conf, 0.7)
+    topics = args.get("topics") if isinstance(args.get("topics"), list) else []
+
+    key = await _cognition_key(uid)
+    try:
+        from backend.cognition.store import async_session as _cog_session
+        from backend.cognition.observations.service import add_observation
+        from backend.cognition.beliefs.service import recompute_subject
+        from backend.cognition.questions.service import detect_from_beliefs
+
+        async with _cog_session() as s:
+            await add_observation(
+                s,
+                user_id=key,
+                statement=observation,
+                subject=subject,
+                implies=belief,
+                polarity=polarity,
+                source_quality=source_quality,
+                memory_ids=[],
+                topics=topics,
+            )
+            b = await recompute_subject(s, key, subject, reason="from conversation")
+            await detect_from_beliefs(s, key)
+            await s.commit()
+    except Exception:
+        logger.exception("form_belief: write failed")
+        return text_content("belief not formed: internal error (non-fatal, just reply).")
+
+    if not b:
+        # First evidence on a fresh subject (or a lone contradiction) — recorded
+        # as evidence, but not enough corroboration to assert a belief yet.
+        return text_content(f"recorded as evidence on '{subject}' (not a belief yet).")
+    return text_content(f"belief updated on '{subject}': {b.statement}")
+
+
+RENDER_CARD_INPUT_SCHEMA = {
+    "type": "object",
+    "required": ["card"],
+    "properties": {
+        "card": {
+            "type": "object",
+            "description": (
+                "A DonnaCard payload: {version:1, card_id, intent, theme, "
+                "expires_at?, blocks:[...]}. intent is one of approval, "
+                "heads_up, confirmation, consent_integration, tracker, "
+                "document, info. blocks use the closed vocabulary (header, "
+                "body, key_values, delta, steps, scopes, file, graph, actions, "
+                "footer); actions has AT MOST 2 buttons. Body voice: lowercase, "
+                "no em dashes, **bold** for facts. card_id must be unique."
+            ),
+        },
+        "action_map": {
+            "type": "object",
+            "description": (
+                "SERVER-ONLY. Maps each actions-block action_id to what tapping "
+                "it does: {action_id: {kind, ...}}. kind is one of: reopen "
+                "(re-run you with `prompt` as the new input — for 'draft a "
+                "reply'), execute ({tool, args} — runs a tool through the safety "
+                "gate), consent ({provider} — OAuth), dismiss, snooze ({when}). "
+                "Never shown to the user; the card only carries opaque action_ids."
+            ),
+        },
+    },
+}
+
+
+@tool(
+    "render_card",
+    (
+        "TERMINATOR — end the turn by rendering an interactive card instead of a "
+        "plain burst. Use when the moment needs a structured, tappable surface: a "
+        "heads-up with one or two actions, an approval (send / book / pay), a "
+        "consent prompt, a tracker, a document. The card renders on every surface "
+        "(WhatsApp buttons, the app, the lock screen) from one payload. "
+        "WHEN NOT TO USE: ordinary conversation or a quick text reply — use "
+        "send_burst. Never render a card with more than two actions (the design "
+        "caps it). Exactly one terminator per turn. If you cannot form a valid "
+        "card, use send_burst instead."
+    ),
+    RENDER_CARD_INPUT_SCHEMA,
+)
+@traceable(name="donna.tool.render_card", run_type="tool")
+async def render_card(args):
+    from pydantic import ValidationError
+
+    from backend.cards.models import DonnaCard
+    from backend.cards.projection import (
+        card_body_text,
+        card_to_whatsapp,
+        fallback_text_from_raw,
+    )
+    from backend.cards.service import persist_card
+    from delivery.messages import TextMessage
+
+    payload = args.get("card") if isinstance(args, dict) else None
+    action_map = args.get("action_map") if isinstance(args, dict) else {}
+    if not isinstance(action_map, dict):
+        action_map = {}
+    if not isinstance(payload, dict):
+        return text_content(
+            "render_card: missing 'card' payload — reply with send_burst instead."
+        )
+
+    buffer = _OUTBOUND_BUFFER.get()
+    try:
+        card = DonnaCard.model_validate(payload)
+    except ValidationError as exc:
+        # Never a broken card — fall back to plain text (design law).
+        logger.warning(
+            "render_card: invalid payload, falling back to text: %s",
+            str(exc).splitlines()[0],
+        )
+        fallback = fallback_text_from_raw(payload)
+        if buffer is not None and fallback:
+            buffer.append(TextMessage(body=fallback))
+        return text_content(
+            "card payload was invalid, so it went out as plain text. "
+            "fix the blocks to use a real card next time."
+        )
+
+    uid = _current_user_id()
+    if uid:
+        try:
+            await persist_card(uid, card, action_map)
+        except Exception:
+            logger.exception("render_card: persist failed (still delivering)")
+
+    msg = card_to_whatsapp(card)
+    if buffer is not None and msg is not None:
+        buffer.append(msg)
+
+    # Mirror send_burst continuity: persist the card's words as the proactive
+    # message + fire the post-turn memory hooks.
+    body_text = card_body_text(card)
+    _fire_memory_hooks(
+        _CURRENT_TRACE.get(),
+        {"messages": [{"type": "text", "text": body_text}]} if body_text else {},
+    )
+    return text_content(f"card rendered (intent={card.intent}) and delivered.")
+
+
 DONNA_TOOLS = (
     recall,
     remember,
@@ -1696,5 +1923,7 @@ DONNA_TOOLS = (
     web_search,
     agentic_web_search,
     research,
+    form_belief,
     send_burst,
+    render_card,
 )
