@@ -524,3 +524,73 @@ class Card(Base):
         Index("idx_cards_user_state", "user_id", "state"),
         Index("idx_cards_user_created", "user_id", "created_at"),
     )
+
+
+class FinanceAccount(Base):
+    """A user's bank/card account — Donna's CACHED model of it, synced from a
+    finance integration. `balance` is a cached fact the proactive runner diffs
+    against upcoming bills; it is not a real ledger. Money is Float for the
+    sandbox (production should use integer minor units)."""
+    __tablename__ = "finance_accounts"
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=generate_uuid)
+    user_id: Mapped[str] = mapped_column(String, ForeignKey("users.id"), nullable=False)
+    external_id: Mapped[str | None] = mapped_column(String, nullable=True)
+    account_type: Mapped[str] = mapped_column(String, nullable=False)  # current | savings | credit_card
+    institution: Mapped[str | None] = mapped_column(String, nullable=True)  # e.g. HDFC
+    masked_number: Mapped[str | None] = mapped_column(String, nullable=True)
+    currency: Mapped[str] = mapped_column(String, nullable=False, default="INR")
+    balance: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
+    balance_synced_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    source: Mapped[str] = mapped_column(String, default="manual")
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, nullable=False)
+
+    __table_args__ = (
+        Index("idx_finacct_user_type", "user_id", "account_type"),
+    )
+
+
+class Bill(Base):
+    """An upcoming/recurring payment Donna watches. auto_pay bills near their
+    due_date drive the low_balance_vs_bill check (proactive_runner §5)."""
+    __tablename__ = "bills"
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=generate_uuid)
+    user_id: Mapped[str] = mapped_column(String, ForeignKey("users.id"), nullable=False)
+    account_id: Mapped[str | None] = mapped_column(
+        String, ForeignKey("finance_accounts.id"), nullable=True
+    )  # the account it auto-debits from
+    biller: Mapped[str] = mapped_column(String, nullable=False)  # e.g. AWS
+    amount: Mapped[float] = mapped_column(Float, nullable=False)
+    currency: Mapped[str] = mapped_column(String, nullable=False, default="INR")
+    due_date: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    auto_pay: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    status: Mapped[str] = mapped_column(String, nullable=False, default="upcoming")  # upcoming | paid | overdue
+    source: Mapped[str] = mapped_column(String, default="manual")
+    synced_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, nullable=False)
+
+    __table_args__ = (
+        Index("idx_bills_user_due", "user_id", "due_date"),
+        Index("idx_bills_user_status", "user_id", "status"),
+    )
+
+
+class FinanceTransaction(Base):
+    """A movement on an account. The transfer executor writes these in the
+    sandbox; in production they would sync from the bank."""
+    __tablename__ = "transactions"
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=generate_uuid)
+    user_id: Mapped[str] = mapped_column(String, ForeignKey("users.id"), nullable=False)
+    account_id: Mapped[str] = mapped_column(String, ForeignKey("finance_accounts.id"), nullable=False)
+    external_id: Mapped[str | None] = mapped_column(String, nullable=True)
+    amount: Mapped[float] = mapped_column(Float, nullable=False)
+    currency: Mapped[str] = mapped_column(String, nullable=False, default="INR")
+    direction: Mapped[str] = mapped_column(String, nullable=False)  # debit | credit
+    merchant: Mapped[str | None] = mapped_column(String, nullable=True)
+    category: Mapped[str | None] = mapped_column(String, nullable=True)
+    occurred_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, nullable=False)
+
+    __table_args__ = (
+        Index("idx_txn_user_occurred", "user_id", "occurred_at"),
+        Index("idx_txn_account", "account_id"),
+    )
