@@ -15,13 +15,13 @@ from dataclasses import dataclass
 # money / legal / irreversible -> explicit approval, every time
 _L0_TOOLS = {
     "transfer", "transfer_funds", "make_payment", "pay", "charge",
-    "book_flight", "book_ride", "book_paid", "cancel_critical_service",
-    "send_legal_document", "delete_data",
+    "book_flight", "book_ride", "book_paid", "order_flowers", "place_order",
+    "cancel_critical_service", "send_legal_document", "delete_data",
 }
 # acts toward a third party AS the user, or not trivially reversible -> confirm
 _L1_TOOLS = {
     "send_email", "send_reply", "send_message", "send_whatsapp",
-    "book_reservation", "make_reservation", "cancel_subscription",
+    "book_reservation", "make_reservation", "book_restaurant", "cancel_subscription",
 }
 _MONEY_NAME_HINTS = ("transfer", "pay", "send_money", "charge", "payment")
 _MONEY_ARG_KEYS = ("amount", "amount_inr", "amount_cents", "amount_sgd")

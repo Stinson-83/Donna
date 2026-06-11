@@ -390,3 +390,31 @@ class ComposioClient:
                 "body": body,
             }
         return composio.tools.execute(slug, user_id=user_id, arguments=arguments)
+
+    async def create_calendar_event(
+        self,
+        user_id: str,
+        *,
+        title: str,
+        start_iso: str,
+        duration_minutes: int = 60,
+        location: str | None = None,
+        description: str | None = None,
+    ) -> dict:
+        """Create a primary-calendar event via Composio. Real artifact — used by
+        the booking executors so a reservation/ride lands on the user's actual
+        calendar even when the third-party rail isn't connected."""
+        composio = _composio()
+        arguments: dict = {
+            "calendar_id": "primary",
+            "summary": title,
+            "start_datetime": start_iso,
+            "event_duration_minutes": duration_minutes,
+        }
+        if location:
+            arguments["location"] = location
+        if description:
+            arguments["description"] = description
+        return composio.tools.execute(
+            "GOOGLECALENDAR_CREATE_EVENT", user_id=user_id, arguments=arguments
+        )

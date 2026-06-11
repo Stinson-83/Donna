@@ -104,7 +104,39 @@ async def resolve_card_action(
             await s.commit()
             return CardActionResult("handled", outbound=outbound)
 
-        # consent / snooze: not yet wired for M2.
+        if kind == "consent":
+            provider = (spec.get("provider") or spec.get("app") or "").strip()
+            if not provider:
+                return CardActionResult(
+                    "rejected", outbound=[TextMessage(body="i'm not sure what to connect.")]
+                )
+            from config import settings
+
+            from delivery.messages import CTAUrlMessage
+            from backend.integrations.composio_client import ComposioClient
+
+            try:
+                _conn_id, url = await ComposioClient(
+                    api_key=settings.composio_api_key or ""
+                ).get_or_create_connection(user_id, provider)
+            except Exception:
+                logger.exception("consent: oauth start failed provider=%s user=%s", provider, user_id[:8])
+                return CardActionResult(
+                    "handled",
+                    outbound=[TextMessage(body=f"couldn't start the {provider} connection just now. try again?")],
+                )
+            _settle(card, action_id, surface, "acted")
+            await s.commit()
+            return CardActionResult("handled", outbound=[CTAUrlMessage(
+                body=f"tap to connect {provider}, then i'll take it from there.",
+                display_text=f"Connect {provider}", url=url,
+            )])
+
+        if kind == "snooze":
+            _settle(card, action_id, surface, "dismissed")
+            await s.commit()
+            return CardActionResult("handled", outbound=[TextMessage(body="ok, i'll bring it back later.")])
+
         return CardActionResult(
             "rejected", outbound=[TextMessage(body="i can't do that one yet.")]
         )

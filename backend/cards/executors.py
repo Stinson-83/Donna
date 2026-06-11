@@ -124,8 +124,92 @@ async def transfer(user_id: str, args: dict) -> tuple[list, bool]:
     return ([TextMessage(body=f"done. {_money(amount, cur)} moved. balance now {_money(new_to_balance, cur)}.")], True)
 
 
+async def _calendar_event(user_id: str, *, title: str, start_iso: str | None,
+                          duration_minutes: int = 60, location: str | None = None,
+                          description: str | None = None) -> bool:
+    """Create a real Google Calendar event via Composio. Returns True on success.
+    The booking executors use this so a reservation/ride lands on the user's
+    actual calendar even when the third-party rail isn't connected."""
+    if not start_iso:
+        return False
+    from config import settings
+    from backend.integrations.composio_client import ComposioClient
+
+    try:
+        await ComposioClient(api_key=settings.composio_api_key or "").create_calendar_event(
+            user_id, title=title, start_iso=start_iso,
+            duration_minutes=duration_minutes, location=location, description=description,
+        )
+        return True
+    except Exception:
+        logger.exception("calendar event create failed user=%s", user_id[:8])
+        return False
+
+
+def _int(v, default: int) -> int:
+    try:
+        return int(v)
+    except (TypeError, ValueError):
+        return default
+
+
+async def book_restaurant(user_id: str, args: dict) -> tuple[list, bool]:
+    """Record a restaurant reservation as a REAL calendar event. The reservation
+    rail (OpenTable) isn't connected, so the calendar entry is the real artifact.
+    args: {name, datetime_iso, party_size?, location?}."""
+    args = args or {}
+    name = args.get("name") or "the restaurant"
+    party = _int(args.get("party_size"), 2)
+    ok = await _calendar_event(
+        user_id, title=f"Dinner at {name} (table for {party})",
+        start_iso=args.get("datetime_iso"), duration_minutes=120,
+        location=args.get("location"), description="reservation via donna",
+    )
+    if ok:
+        return ([TextMessage(body=f"added to your calendar: {name}, table for {party}.")], True)
+    return ([TextMessage(body=f"i couldn't add {name} to your calendar — is google calendar connected?")], False)
+
+
+async def book_ride(user_id: str, args: dict) -> tuple[list, bool]:
+    """Set a REAL calendar reminder for a ride. The ride-hailing rail (Grab/Uber)
+    isn't connected, so this is a calendar reminder, not a booked car.
+    args: {destination, pickup_time_iso, service?}."""
+    args = args or {}
+    dest = args.get("destination") or "your destination"
+    service = (args.get("service") or "cab").lower()
+    ok = await _calendar_event(
+        user_id, title=f"{service} to {dest}", start_iso=args.get("pickup_time_iso"),
+        duration_minutes=45, description="ride reminder via donna",
+    )
+    if ok:
+        return ([TextMessage(body=(
+            f"set a calendar reminder for your {service} to {dest}. "
+            f"(booking the actual ride needs grab or uber connected.)"
+        ))], True)
+    return ([TextMessage(body=(
+        f"i can't book the {service} yet — grab/uber isn't connected and i "
+        f"couldn't reach your calendar to set a reminder."
+    ))], False)
+
+
+async def order_flowers(user_id: str, args: dict) -> tuple[list, bool]:
+    """Honest stub: no flower-delivery rail (FNP) is connected, so Donna can't
+    actually place the order. Don't fake a 'done'. args: {recipient, item, amount}."""
+    args = args or {}
+    recipient = args.get("recipient") or "them"
+    item = args.get("item") or "flowers"
+    logger.info("order_flowers (no rail): %s for %s amount=%s", item, recipient, args.get("amount"))
+    return ([TextMessage(body=(
+        f"i don't have a flower-delivery service connected yet, so i can't place "
+        f"the {item} order for {recipient} myself. want me to remind you to do it?"
+    ))], False)
+
+
 # tool name (as the loop puts it in action_map) -> executor
 EXECUTORS = {
     "send_email": send_email,
     "transfer": transfer,
+    "book_restaurant": book_restaurant,
+    "book_ride": book_ride,
+    "order_flowers": order_flowers,
 }
