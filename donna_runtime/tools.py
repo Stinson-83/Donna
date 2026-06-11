@@ -1932,11 +1932,96 @@ async def render_card(args):
     return text_content(f"card rendered (intent={card.intent}) and delivered.")
 
 
+@tool(
+    "track_goal",
+    (
+        "Record a goal the user is working toward — what they're trying to "
+        "achieve — when they state it ('i want to raise a seed round', 'i'm "
+        "trying to lose weight') or it's clearly implied by sustained behavior. "
+        "Goals shape how you prioritize everything: an investor email matters "
+        "more when fundraising is a goal. Reuse the same title to strengthen an "
+        "existing goal instead of duplicating. "
+        "WHEN NOT TO USE: a one-off task (use schedule), a passing wish, or an "
+        "in-flight commitment (use remember with kind='open_loop')."
+    ),
+    {
+        "type": "object",
+        "required": ["title"],
+        "properties": {
+            "title": {"type": "string", "description": "The goal in the user's terms, e.g. 'raise a seed round'."},
+            "category": {"type": "string", "description": "career | health | relationships | financial | personal | other"},
+            "priority": {"type": "integer", "description": "1 (highest) to 5. Default 3."},
+            "description": {"type": "string", "description": "Optional detail or the why."},
+            "status": {"type": "string", "description": "active (default) | achieved | paused | dropped."},
+        },
+    },
+)
+@traceable(name="donna.tool.track_goal", run_type="tool")
+async def track_goal(args):
+    uid = _current_user_id()
+    if not uid:
+        return text_content("goal not tracked: no user in scope (runtime bug, just reply).")
+    title = str(args.get("title") or "").strip()
+    if not title:
+        return text_content("goal not tracked: 'title' is required.")
+    from backend.knowledge.goals import create_or_update_goal
+
+    try:
+        await create_or_update_goal(
+            uid, title,
+            description=str(args.get("description") or "") or None,
+            category=str(args.get("category") or "personal"),
+            priority=int(args.get("priority") or 3),
+            status=str(args.get("status") or "active"),
+            source="chat",
+        )
+    except Exception:
+        logger.exception("track_goal: write failed")
+        return text_content("goal not tracked: internal error (non-fatal, just reply).")
+    return text_content(f"goal tracked: '{title}'. i'll weigh things against it.")
+
+
+@tool(
+    "recall_about",
+    (
+        "Pull everything Donna knows about ONE person or topic across all memory "
+        "at once — their relationship, facts about them, open loops, upcoming "
+        "calendar, and related goals — so you can connect the dots before acting. "
+        "Use before a birthday, a meeting, a reply, or any moment where the right "
+        "move depends on context scattered across memory (e.g. recall_about='mom' "
+        "before her birthday surfaces her prefs + the dinner that night + that you "
+        "usually call her). "
+        "WHEN NOT TO USE: a broad or open-ended search (use recall); a fresh web "
+        "lookup (use web_search)."
+    ),
+    {
+        "type": "object",
+        "required": ["entity"],
+        "properties": {
+            "entity": {"type": "string", "description": "One person or topic, e.g. 'mom', 'sequoia', 'the waterloo move'."},
+        },
+    },
+)
+@traceable(name="donna.tool.recall_about", run_type="tool")
+async def recall_about(args):
+    uid = _current_user_id()
+    if not uid:
+        return text_content("recall_about: no user in scope (runtime bug, just reply).")
+    entity = str(args.get("entity") or "").strip()
+    if not entity:
+        return text_content("recall_about: 'entity' is required (a person or topic).")
+    from backend.knowledge.connect import recall_about as _recall_about
+
+    return text_content(await _recall_about(uid, entity))
+
+
 DONNA_TOOLS = (
     recall,
+    recall_about,
     remember,
     watch,
     schedule,
+    track_goal,
     check_calendar,
     image,
     web_search,

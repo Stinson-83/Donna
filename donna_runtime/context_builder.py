@@ -56,13 +56,21 @@ async def load_user_model_block(user_id: str | None) -> str:
     """
     if not user_id:
         return ""
+    facts = ""
     try:
         from backend.memory.user_facts.rendering import load_and_render
 
-        return (await load_and_render(user_id)).strip()
+        facts = (await load_and_render(user_id)).strip()
     except Exception:
         logger.exception("load_user_model_block: render failed")
-        return ""
+    goals = ""
+    try:
+        from backend.knowledge.goals import render_goals_block
+
+        goals = (await render_goals_block(user_id)).strip()
+    except Exception:
+        logger.exception("load_user_model_block: goals render failed")
+    return "\n\n".join(part for part in (facts, goals) if part)
 
 
 @dataclass(frozen=True)

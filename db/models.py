@@ -625,3 +625,28 @@ class Watch(Base):
         Index("idx_watch_status_next", "status", "next_check"),
         Index("idx_watch_user_status", "user_id", "status"),
     )
+
+
+class Goal(Base):
+    """What the user is trying to achieve — a first-class part of the User Model
+    (user_model.md Layer 1). Goals give meaning: the loop prioritizes events,
+    notifications, and actions against active goals. Learned from explicit
+    statements ('i want to raise funding') or inferred from behavior."""
+    __tablename__ = "goals"
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=generate_uuid)
+    user_id: Mapped[str] = mapped_column(String, ForeignKey("users.id"), nullable=False)
+    title: Mapped[str] = mapped_column(String, nullable=False)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    category: Mapped[str] = mapped_column(String, nullable=False, default="personal")
+    # career | health | relationships | financial | personal | other
+    priority: Mapped[int] = mapped_column(Integer, nullable=False, default=3)  # 1 = highest
+    status: Mapped[str] = mapped_column(String, nullable=False, default="active")
+    # active | achieved | paused | dropped
+    confidence: Mapped[float] = mapped_column(Float, nullable=False, default=0.7)
+    source: Mapped[str] = mapped_column(String, nullable=False, default="chat")  # chat | inferred | onboarding
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow, nullable=False)
+
+    __table_args__ = (
+        Index("idx_goals_user_status", "user_id", "status"),
+    )
