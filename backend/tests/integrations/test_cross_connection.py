@@ -85,6 +85,41 @@ async def test_no_links_when_isolated(db):
     assert not has_links(conns)
 
 
+# ── reactive read_connections tool (logic) ──────────────────────────────────
+
+@pytest.mark.asyncio
+async def test_summarize_connections_reads_links(db):
+    from backend.knowledge.connections import summarize_connections
+
+    await _seed_scenario(db, anchor_start=_at(21, 40))
+    now = _at(12, 0)  # same future day, so the anchor is in the 30-day resolve window
+
+    out = await summarize_connections("u1", "SQ516", now=now)
+    assert "SQ516" in out
+    assert "Team dinner" in out          # the clash
+    assert "Pickup · Aniroodh" in out    # close in time
+    assert "Aniroodh" in out             # people involved
+
+
+@pytest.mark.asyncio
+async def test_summarize_connections_no_match_and_isolated(db):
+    from backend.knowledge.connections import summarize_connections
+
+    await _seed_scenario(db, anchor_start=_at(21, 40))
+    now = _at(12, 0)
+
+    # a reference that matches no event
+    assert "no upcoming event matches" in await summarize_connections("u1", "zzzz", now=now)
+
+    # an event with nothing connected reads as isolated
+    async with db() as s:
+        s.add(CalendarEntry(user_id="u1", title="Solo focus", start_time=_at(13, 0),
+                            end_time=_at(14, 0), google_event_id="g_focus"))
+        await s.commit()
+    out = await summarize_connections("u1", "Solo focus", now=now)
+    assert "nothing else" in out
+
+
 # ── proactive trigger ────────────────────────────────────────────────────────
 
 def _stub_brain(monkeypatch):

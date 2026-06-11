@@ -2053,9 +2053,47 @@ async def track_interest(args):
     )
 
 
+@tool(
+    "read_connections",
+    (
+        "See what a specific calendar event TOUCHES — what it clashes with, what's "
+        "scheduled right around it, other events or open commitments tied to the "
+        "same person or place, and who's involved. Use to reason about downstream "
+        "impact before acting: when something moves (a flight delay, a meeting "
+        "reschedule), when the user asks 'what does this affect?' / 'what depends "
+        "on X?', or while preparing for an event and you need the full picture "
+        "around it. This is how you catch the second-order consequence (the flight "
+        "moved, so the pickup and the dinner are now affected). "
+        "WHEN NOT TO USE: to look up facts about a person or topic (use "
+        "recall_about); to list the day's schedule (use check_calendar); when "
+        "there is no specific event in question."
+    ),
+    {
+        "type": "object",
+        "required": ["event"],
+        "properties": {
+            "event": {"type": "string", "description": "The event to inspect, by a word from its title or who/where it involves, e.g. 'flight', 'Raghav demo', 'dinner'. Leave empty for the next thing on the calendar."},
+        },
+    },
+)
+@traceable(name="donna.tool.read_connections", run_type="tool")
+async def read_connections(args):
+    uid = _current_user_id()
+    if not uid:
+        return text_content("read_connections: no user in scope (runtime bug, just reply).")
+    from backend.knowledge.connections import summarize_connections
+
+    try:
+        return text_content(await summarize_connections(uid, str(args.get("event") or "")))
+    except Exception:
+        logger.exception("read_connections: walk failed")
+        return text_content("read_connections: internal error (non-fatal, just reply).")
+
+
 DONNA_TOOLS = (
     recall,
     recall_about,
+    read_connections,
     remember,
     watch,
     schedule,

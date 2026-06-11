@@ -149,3 +149,80 @@ def has_links(conns: dict | None) -> bool:
     return bool(
         conns["conflicts"] or conns["neighbors"] or conns["referential_events"] or conns["open_loops"]
     )
+
+
+async def _resolve_anchor(session, user_id: str, event_query: str, now):
+    """Map a natural reference ('flight', 'Raghav demo', '') to an upcoming event:
+    the soonest one whose title/location contains a query word, or — with no query
+    — the soonest upcoming event. Returns the CalendarEntry or None."""
+    import re
+
+    from sqlalchemy import select
+
+    from db.models import CalendarEntry
+
+    tokens = [t for t in re.findall(r"[a-z0-9]+", (event_query or "").lower()) if len(t) >= 3]
+    rows = (await session.execute(
+        select(CalendarEntry).where(
+            CalendarEntry.user_id == user_id,
+            CalendarEntry.start_time >= now - timedelta(hours=3),
+            CalendarEntry.start_time <= now + timedelta(days=30),
+        ).order_by(CalendarEntry.start_time.asc()).limit(60)
+    )).scalars().all()
+    if not rows:
+        return None
+    if tokens:
+        for ev in rows:
+            hay = f"{ev.title or ''} {ev.location or ''}".lower()
+            if any(t in hay for t in tokens):
+                return ev
+        return None  # a reference was given but nothing matched it
+    return rows[0]  # no reference -> the next thing on the calendar
+
+
+async def summarize_connections(user_id: str, event_query: str = "", *, now=None) -> str:
+    """Reactive read of what an event touches, rendered for the BRAIN loop. Backs
+    the read_connections tool. Retrieval only."""
+    from datetime import timezone
+    from zoneinfo import ZoneInfo
+
+    from sqlalchemy import select
+
+    from db.models import User, utcnow
+    from db.session import async_session
+
+    now = now or utcnow()
+    async with async_session() as s:
+        anchor = await _resolve_anchor(s, user_id, event_query, now)
+        anchor_id = anchor.id if anchor is not None else None
+        user = (await s.execute(select(User).where(User.id == user_id))).scalar_one_or_none()
+        tzname = user.timezone if user else None
+
+    if anchor_id is None:
+        if (event_query or "").strip():
+            return f"no upcoming event matches '{event_query.strip()}'. check the calendar first."
+        return "nothing on the calendar to connect right now."
+
+    tz = ZoneInfo(tzname or "Asia/Singapore")
+
+    def f(dt):
+        return dt.replace(tzinfo=timezone.utc).astimezone(tz).strftime("%a %I:%M %p").replace(" 0", " ").lower()
+
+    conns = await find_connections(user_id, anchor_id)
+    a = conns["anchor"]
+    loc = f", {a['location']}" if a.get("location") else ""
+    if not has_links(conns):
+        return f'"{a["title"]}" ({f(a["start"])}{loc}) — nothing else on the calendar or your open loops connects to it.'
+
+    lines = [f'connections for "{a["title"]}" ({f(a["start"])}{loc}):']
+    for c in conns["conflicts"][:5]:
+        lines.append(f"- clashes with: {c['title']} ({f(c['start'])})")
+    for n in conns["neighbors"][:5]:
+        lines.append(f"- close in time: {n['title']} ({f(n['start'])})")
+    for r in conns["referential_events"][:5]:
+        lines.append(f"- related (shared person/place): {r['title']} ({f(r['start'])})")
+    for loop in conns["open_loops"][:5]:
+        lines.append(f"- open commitment: {loop}")
+    if conns["people"]:
+        lines.append(f"- people involved: {', '.join(conns['people'])}")
+    return "\n".join(lines)
