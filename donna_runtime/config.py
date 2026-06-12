@@ -19,21 +19,35 @@ TOOL_NAMESPACE = "donna"
 MCP_SERVER_NAME = "donna-tools"
 MCP_SERVER_VERSION = "0.1.0"
 
+# The agent's permitted tools. MUST stay in exact sync with the registered set
+# (donna_runtime.tools.DONNA_TOOLS): a name here that isn't registered is dead, and
+# a registered tool missing here is unreachable by the loop. test_tool_allowlist
+# guards the exact match.
 ALLOWED_TOOLS = (
-    "mcp__donna__recall_episodic",
-    "mcp__donna__recall_graph",
-    "mcp__donna__smart_recall",
-    "mcp__donna__read_tracker",
-    "mcp__donna__list_open_loops",
-    "mcp__donna__list_calendar",
-    "mcp__donna__log_observation",
-    "mcp__donna__track_open_loop",
-    "mcp__donna__close_open_loop",
-    "mcp__donna__set_timezone",
-    "mcp__donna__schedule_reminder",
-    "mcp__donna__resolve_time_expression",
-    "mcp__donna__read_situation_brief",
+    # Retrieval (read-only)
+    "mcp__donna__recall",
+    "mcp__donna__recall_about",
+    "mcp__donna__read_connections",
+    "mcp__donna__check_calendar",
+    # Action (write side effects)
+    "mcp__donna__remember",
+    "mcp__donna__watch",
+    "mcp__donna__schedule",
+    "mcp__donna__track_goal",
+    "mcp__donna__track_interest",
+    "mcp__donna__track_task",
+    "mcp__donna__track_flight",
+    # Belief formation — records conclusions about the user into the shared
+    # cognition model the app reads. One mind, both surfaces.
+    "mcp__donna__form_belief",
+    "mcp__donna__image",
+    # Live lookup (Exa-backed) — real-world answers instead of "check an app".
+    "mcp__donna__web_search",
+    "mcp__donna__agentic_web_search",
+    "mcp__donna__research",
+    # Terminators (end the turn)
     "mcp__donna__send_burst",
+    "mcp__donna__render_card",
 )
 
 DISALLOWED_TOOLS = (
