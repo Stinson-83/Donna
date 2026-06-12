@@ -61,6 +61,9 @@ async def _build_scoring_context(user_id: str) -> ScoringContext:
         if user else {}
     )
     relationships = list(biography.get("relationships") or [])
+
+    from backend.knowledge.goals import goal_keywords
+
     return ScoringContext(
         biography_relationships=relationships,
         open_loop_keywords=[
@@ -68,11 +71,19 @@ async def _build_scoring_context(user_id: str) -> ScoringContext:
             for loop in loops if (loop.content or "").strip()
         ],
         recent_sent_thread_ids=set(),
+        goal_keywords=await goal_keywords(user_id),
     )
 
 
-def _format_trigger_prompt(msg: NormalizedGmailMessage, signals: list[str]) -> str:
+def _format_trigger_prompt(
+    msg: NormalizedGmailMessage, signals: list[str], goal_hint: str | None = None
+) -> str:
     body_excerpt = (msg.body_text or msg.snippet or "")[:600]
+    goal_line = (
+        f"This relates to the user's goal: {goal_hint}. Weigh it in that light and, "
+        "if you surface it, say why it matters for that goal.\n"
+        if goal_hint else ""
+    )
     return (
         "[SYSTEM TRIGGER: proactive_email]\n"
         "A new email arrived that may be worth surfacing to the user. "
@@ -90,7 +101,8 @@ def _format_trigger_prompt(msg: NormalizedGmailMessage, signals: list[str]) -> s
         "- a unique card_id, and expires_at set to any hard deadline in the email\n\n"
         f"From: {msg.from_name or ''} <{msg.from_address}>\n"
         f"Subject: {msg.subject or ''}\n"
-        f"Importance signals: {', '.join(signals) or 'none'}\n\n"
+        f"Importance signals: {', '.join(signals) or 'none'}\n"
+        f"{goal_line}\n"
         f"{body_excerpt}"
     )
 
@@ -126,8 +138,13 @@ async def maybe_surface_email(
 
     from donna_runtime.config import DonnaAgentConfig
 
+    from backend.knowledge.goals import relevant_goals
+
+    rel = await relevant_goals(user_id, f"{msg.subject or ''} {msg.body_text or msg.snippet or ''}")
+    goal_hint = rel[0]["title"] if rel else None
+
     cfg = DonnaAgentConfig(mode="proactive", user_id=user_id)
-    prompt = _format_trigger_prompt(msg, score.signals)
+    prompt = _format_trigger_prompt(msg, score.signals, goal_hint=goal_hint)
     state = {
         "user_id": user_id,
         # raw_input is what brain.donna_turn reads; user_message is the

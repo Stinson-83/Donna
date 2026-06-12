@@ -70,6 +70,25 @@ def compute_next_check(
 
 # ── service ──────────────────────────────────────────────────────────────
 
+async def _apply_goal_boost(user_id: str, text: str, importance: int) -> int:
+    """Cap 7 — goals drive prioritization. A watch whose subject relates to an
+    active goal gets more important, so it's checked sooner (compute_next_check
+    favors high importance) and ranks higher in the watching list. Boost scales
+    with goal priority. No goals / no match -> unchanged."""
+    try:
+        from backend.knowledge.goals import relevant_goals
+
+        rel = await relevant_goals(user_id, text)
+        if not rel:
+            return importance
+        top = int(rel[0]["priority"] or 3)
+        boost = max(0, 35 - (top - 1) * 7)  # p1->35, p2->28, p3->21, p4->14, p5->7
+        return min(100, int(importance) + boost)
+    except Exception:
+        logger.exception("_apply_goal_boost failed user=%s", user_id[:8])
+        return importance
+
+
 async def create_watch(
     user_id: str,
     watch_type: str,
@@ -87,6 +106,7 @@ async def create_watch(
 
     watch_type = (watch_type or "generic").strip().lower()
     subject_key = (subject_key or title or "").strip()
+    importance = await _apply_goal_boost(user_id, f"{title} {subject_key}", importance)
     async with async_session() as s:
         existing = (await s.execute(
             select(Watch).where(

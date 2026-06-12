@@ -7,10 +7,66 @@ on normalized title so repeated mentions strengthen one goal, not spawn dupes.
 from __future__ import annotations
 
 import logging
+import re
 
 logger = logging.getLogger(__name__)
 
 _CATEGORIES = {"career", "health", "relationships", "financial", "personal", "other"}
+
+# Stopwords stripped from goal text so matching keys on meaningful terms only.
+_STOP = {
+    "want", "need", "make", "more", "less", "this", "that", "with", "from", "into",
+    "have", "your", "their", "about", "before", "after", "than", "then", "some",
+    "goal", "goals", "trying", "work", "working", "toward", "towards", "every",
+}
+
+# Domain terms a goal's category implies, so a financial goal still matches an
+# email about a "series" round even if the title only says "raise funding".
+_CATEGORY_SYNONYMS = {
+    "financial": {"funding", "investor", "investors", "fundraise", "fundraising",
+                  "seed", "series", "venture", "valuation", "runway", "round"},
+    "career": {"job", "jobs", "interview", "interviews", "offer", "internship",
+               "recruiter", "recruiters", "promotion", "hiring", "role", "application"},
+    "health": {"gym", "calorie", "calories", "sleep", "workout", "workouts", "diet",
+               "weight", "running", "fitness", "medication"},
+}
+
+
+def _terms(text: str) -> set[str]:
+    return {w for w in re.findall(r"[a-z0-9]+", (text or "").lower()) if len(w) >= 4 and w not in _STOP}
+
+
+def goal_terms(goal) -> set[str]:
+    """The match terms for one goal — significant words from its title/description
+    plus the terms its category implies. Accepts a Goal row or a dict."""
+    def _get(attr):
+        return goal.get(attr) if isinstance(goal, dict) else getattr(goal, attr, None)
+
+    terms = _terms(f"{_get('title') or ''} {_get('description') or ''}")
+    terms |= _CATEGORY_SYNONYMS.get((_get("category") or "").lower(), set())
+    return terms
+
+
+async def goal_keywords(user_id: str) -> list[str]:
+    """Flattened match terms across all active goals — for the email scorer's
+    context. Deterministic, no llm."""
+    terms: set[str] = set()
+    for g in await list_active_goals(user_id):
+        terms |= goal_terms(g)
+    return sorted(terms)
+
+
+async def relevant_goals(user_id: str, text: str) -> list[dict]:
+    """Which active goals a piece of text relates to (highest-priority first), so a
+    surface can explain 'this matters because of your goal'. Deterministic."""
+    low = (text or "").lower()
+    out: list[dict] = []
+    for g in await list_active_goals(user_id):
+        matched = sorted(t for t in goal_terms(g) if t in low)
+        if matched:
+            out.append({"title": g.title, "priority": g.priority, "category": g.category, "terms": matched})
+    out.sort(key=lambda d: d["priority"])  # priority 1 = highest
+    return out
 
 
 def _norm(title: str) -> str:

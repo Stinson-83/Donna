@@ -21,6 +21,9 @@ class ScoringContext:
     open_loop_keywords: Sequence[str] = field(default_factory=list)
     # phrases pulled from open_loops summaries
     recent_sent_thread_ids: set[str] = field(default_factory=set)
+    goal_keywords: Sequence[str] = field(default_factory=list)
+    # terms from the user's active goals (knowledge.goals.goal_keywords) — an email
+    # that touches a goal is more important (Cap 7: goals drive prioritization)
 
 
 @dataclass(frozen=True)
@@ -67,6 +70,13 @@ def score_email(
         if kw.lower() in subj_lower or kw.lower() in body_lower:
             score += 0.5
             signals.append("open_loop_match")
+            break
+
+    goal_hay = f"{subj_lower} {body_lower} {msg.from_address.lower()}"
+    for kw in ctx.goal_keywords:
+        if kw and kw.lower() in goal_hay:
+            score += 0.5
+            signals.append("goal_match")
             break
 
     if msg.thread_id in ctx.recent_sent_thread_ids:
