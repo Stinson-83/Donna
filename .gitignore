@@ -53,3 +53,6 @@ archive/
 .worktrees/
 
 
+
+# Runtime event log (durable queue is Postgres per ADR §10.2)
+.donna/events.jsonl
