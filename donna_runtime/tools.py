@@ -2054,6 +2054,49 @@ async def track_interest(args):
 
 
 @tool(
+    "track_flight",
+    (
+        "Start tracking a specific flight so Donna watches its status on her own "
+        "and tells the user about delays, gate changes, or cancellations — and "
+        "fixes anything downstream (moves the linked calendar event, flags the "
+        "airport pickup) when the time shifts. Use when a flight with a number and "
+        "date should be kept an eye on ('track my flight SQ516 on the 25th', "
+        "'monitor BA112 tomorrow'). "
+        "WHEN NOT TO USE: a vague travel plan with no flight number (use remember); "
+        "a hotel or price topic (use track_interest); a one-off lookup (web_search)."
+    ),
+    {
+        "type": "object",
+        "required": ["flight_no", "date"],
+        "properties": {
+            "flight_no": {"type": "string", "description": "The flight number, e.g. 'SQ516', 'BA112'."},
+            "date": {"type": "string", "description": "The flight date as YYYY-MM-DD."},
+        },
+    },
+)
+@traceable(name="donna.tool.track_flight", run_type="tool")
+async def track_flight(args):
+    uid = _current_user_id()
+    if not uid:
+        return text_content("flight not tracked: no user in scope (runtime bug, just reply).")
+    flight_no = str(args.get("flight_no") or "").strip()
+    date = str(args.get("date") or "").strip()
+    if not flight_no or not date:
+        return text_content("flight not tracked: need a flight number and a date (YYYY-MM-DD).")
+    from backend.travel.flights import track_flight as _track_flight
+
+    try:
+        await _track_flight(uid, flight_no, date)
+    except Exception:
+        logger.exception("track_flight: failed")
+        return text_content("flight not tracked: internal error (non-fatal, just reply).")
+    return text_content(
+        f"tracking {flight_no.upper()} on {date}. i'll tell you if the time, gate, or "
+        "status changes — and sort out anything it affects."
+    )
+
+
+@tool(
     "read_connections",
     (
         "See what a specific calendar event TOUCHES — what it clashes with, what's "
@@ -2099,6 +2142,7 @@ DONNA_TOOLS = (
     schedule,
     track_goal,
     track_interest,
+    track_flight,
     check_calendar,
     image,
     web_search,

@@ -276,6 +276,17 @@ WATCH_EVALUATORS = {
 }
 
 
+def _evaluator_for(watch_type: str):
+    """Dispatch to the evaluator for a watch_type. Flight lives in backend.travel
+    and is imported lazily so this module has no import cycle with it (travel
+    imports create_watch/WatchOutcome from here)."""
+    if watch_type == "flight":
+        from backend.travel.flights import evaluate_flight_watch
+
+        return evaluate_flight_watch
+    return WATCH_EVALUATORS.get(watch_type, evaluate_generic)
+
+
 # ── sweep (called by the runner each tick) ───────────────────────────────
 
 async def _invoke_brain(state: dict, config=None) -> dict:
@@ -310,7 +321,7 @@ async def sweep_due_watches(now: datetime | None = None) -> int:
     due = await claim_due_watches(now)
     fired = 0
     for w in due:
-        evaluator = WATCH_EVALUATORS.get(w.watch_type, evaluate_generic)
+        evaluator = _evaluator_for(w.watch_type)
         try:
             outcome = await evaluator(w)
         except Exception:
