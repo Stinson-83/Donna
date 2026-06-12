@@ -85,6 +85,22 @@ export async function getWatches(user = getUserId()) {
   return res.json()
 }
 
+// The Dynamic Watch Bar — one ranked "what matters now" across cards/watches/tasks.
+const MOCK_WATCHBAR = [
+  { kind: 'card', ref_id: 'c_aws', title: 'HDFC · auto-pay', note: 'needs you', priority: 96, tier: 'critical' },
+  { kind: 'watch', ref_id: 'w1', title: 'sequoia partner reply', note: 'reply', priority: 90, tier: 'critical' },
+  { kind: 'task', ref_id: 't1', title: 'renew passport', note: 'due tomorrow', priority: 78, tier: 'high' },
+  { kind: 'watch', ref_id: 'w2', title: 'tokyo flights below ₹38k', note: 'web', priority: 62, tier: 'medium' },
+  { kind: 'task', ref_id: 't2', title: "rsvp to priya's wedding", note: 'due in 4d', priority: 55, tier: 'medium' },
+]
+
+export async function getWatchbar(user = getUserId()) {
+  if (MOCK) return { items: MOCK_WATCHBAR }
+  const res = await fetch(`${API_BASE}/watchbar?user=${encodeURIComponent(user)}`)
+  if (!res.ok) throw new Error(`watchbar failed: ${res.status}`)
+  return res.json()
+}
+
 const MOCK_TODAY = {
   date: 'Thu 11 Jun',
   holding: 23,

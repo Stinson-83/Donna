@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import Card from '../components/Card.jsx'
-import { actCard, getCards, getToday, getWatches } from '../cards.js'
+import WatchBar from '../components/WatchBar.jsx'
+import { actCard, getCards, getToday, getWatchbar, getWatches } from '../cards.js'
 
 // The Today / Dashboard screen (donna-design-spec/reference/dashboard-v3).
 // Needs-you cards (the hero is the top dark card) → watching → your day → pulse.
@@ -8,15 +9,17 @@ export default function TodayPage({ onMenu }) {
   const [cards, setCards] = useState([])
   const [watching, setWatching] = useState([])
   const [today, setToday] = useState({ calendar: [], holding: 0, date: '' })
+  const [bar, setBar] = useState([])
   const [acting, setActing] = useState(null)
   const [ready, setReady] = useState(false)
 
   async function load() {
     try {
-      const [cs, ws, td] = await Promise.all([getCards(), getWatches(), getToday()])
+      const [cs, ws, td, wb] = await Promise.all([getCards(), getWatches(), getToday(), getWatchbar()])
       setCards(cs.cards || [])
       setWatching(ws.watching || [])
       setToday(td || {})
+      setBar(wb.items || [])
     } catch {
       /* fail soft */
     } finally {
@@ -58,6 +61,9 @@ export default function TodayPage({ onMenu }) {
         </div>
         <span className="sec mr-9">{today.date}</span>
       </div>
+
+      {/* the dynamic watch bar — pinned "what matters now" */}
+      <WatchBar items={bar} />
 
       <div className="scroll flex-1 overflow-y-auto px-[18px] pb-28 pt-1">
         {/* NEEDS YOU — the cards (top dark card is the hero) */}

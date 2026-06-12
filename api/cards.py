@@ -196,6 +196,17 @@ async def set_settings(body: SettingsBody) -> dict:
     return {"user_id": user_id, "notify_channel": channel}
 
 
+@router.get("/watchbar")
+async def watchbar(user: str) -> dict:
+    """The Dynamic Watch Bar: one ranked 'what matters now' across pending cards,
+    active watches, and due tasks. Reorders live as priorities shift."""
+    from api.push import resolve_user_id
+    from backend.knowledge.attention import rank_attention
+
+    user_id = await resolve_user_id(user)
+    return {"user_id": user_id, "items": await rank_attention(user_id)}
+
+
 @router.get("/library")
 async def library(user: str) -> dict:
     """Counts behind the Library drawer: people, documents, trackers (active
