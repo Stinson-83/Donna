@@ -1,33 +1,34 @@
-// Single source of demo content. One consistent narrative across all four pages:
-// a founder building Donna, an Antler/YC review tonight, pitch nerves, thin
-// sleep, a few open loops. Swap these for real API data when the backend is on.
+// Single source of demo content. One consistent narrative across every page:
+// aarav, a founder building poke, a sequoia term sheet to close before a move to
+// waterloo, cofounder raghav, brother aniroodh, pitch nerves, thin sleep, a few
+// open loops. Swap these for real API data when the backend is on.
 
 export const PLAN = {
   greeting: 'morning, aarav',
   date: 'tuesday · june 10',
-  thesis: 'today is about the antler deck.',
+  thesis: 'today is about the sequoia term sheet.',
   thesisCoda: 'everything else can wait.',
-  because: ['the deck', 'review confidence', 'investor conversations', 'the raise'],
+  because: ['the term sheet', 'the raise', 'investor conversations', 'the waterloo move'],
   decision: {
-    considered: ['investor outreach', 'roadmap planning', 'hiring'],
-    chose: 'the antler deck',
-    because: 'it influences three upcoming decisions, and the others can wait a day.',
+    considered: ['the data room', 'roadmap planning', 'hiring'],
+    chose: 'the sequoia close',
+    because: 'it gates the move and three decisions after it; the rest can wait a day.',
   },
   nudgeBelief: 'sleep predicts your stress better than workload',
   hero: {
     register: 'confrontation',
     title: 'the deck, final pass',
-    body: '4 hours till the 6pm review. the market-size slide is still the weak point — that\'s the one to fix first.',
+    body: '4 hours till the sequoia call. the market-size slide is still the weak point — that\'s the one to fix first.',
   },
   openLoops: [
-    { id: 1, text: 'reply to luca', meta: 'open 3 days' },
-    { id: 2, text: 'antler intro form', meta: 'due friday' },
+    { id: 1, text: 'reply to the sequoia partner', meta: 'open 3 days' },
+    { id: 2, text: 'send the data room', meta: 'due friday' },
     { id: 3, text: 'call mom', meta: 'open 1 week' },
   ],
   calendar: [
-    { time: '11:00', title: '1:1 with priya', tone: 'normal' },
+    { time: '11:00', title: '1:1 with raghav', tone: 'normal' },
     { time: '14:00', title: 'deep work — deck', tone: 'normal' },
-    { time: '18:00', title: 'antler review', tone: 'peak' },
+    { time: '18:00', title: 'sequoia call', tone: 'peak' },
   ],
   trackers: [
     { label: 'sleep', value: '6.2h', tone: 'low' },
@@ -101,18 +102,17 @@ export const MEMORY_RECENT = [
 export const MEMORY_GRAPH = {
   nodes: [
     { id: 'aarav', label: 'you', x: 50, y: 50, hub: true },
-    { id: 'donna', label: 'donna', x: 22, y: 28 },
-    { id: 'antler', label: 'antler', x: 78, y: 26 },
-    { id: 'priya', label: 'priya', x: 20, y: 72 },
-    { id: 'luca', label: 'luca', x: 80, y: 70 },
+    { id: 'poke', label: 'poke', x: 22, y: 28 },
+    { id: 'sequoia', label: 'sequoia', x: 78, y: 26 },
+    { id: 'raghav', label: 'raghav', x: 20, y: 72 },
+    { id: 'aniroodh', label: 'aniroodh', x: 80, y: 70 },
     { id: 'sleep', label: 'sleep', x: 50, y: 86 },
     { id: 'pitch', label: 'pitch nerves', x: 52, y: 16 },
   ],
   edges: [
-    ['aarav', 'donna'], ['aarav', 'antler'], ['aarav', 'priya'],
-    ['aarav', 'luca'], ['aarav', 'sleep'], ['aarav', 'pitch'],
-    ['donna', 'priya'], ['antler', 'pitch'], ['antler', 'luca'],
-    ['pitch', 'sleep'],
+    ['aarav', 'poke'], ['aarav', 'sequoia'], ['aarav', 'raghav'],
+    ['aarav', 'aniroodh'], ['aarav', 'sleep'], ['aarav', 'pitch'],
+    ['poke', 'raghav'], ['sequoia', 'pitch'], ['pitch', 'sleep'],
   ],
 }
 
@@ -148,8 +148,8 @@ export const BELIEFS = [
     history: [71, 80, 84, 89],
     strengthenedBy: 'stress rose ~40h after sleep dropped — again.',
     reasoning: 'across milestones, low sleep precedes stress more reliably than high workload does.',
-    related: ['sleep', 'stress', 'the review'],
-    chain: ['sleep', 'stress', 'review performance'],
+    related: ['sleep', 'stress', 'the raise'],
+    chain: ['sleep', 'stress', 'pitch performance'],
   },
   {
     id: 'overprepare',
@@ -160,22 +160,22 @@ export const BELIEFS = [
     evidence: ['investor meetings', 'product launches', 'pitch reviews'],
     counter: ['the seed deck you shipped in one pass'],
     history: [70, 76, 82, 84],
-    strengthenedBy: 'a fourth deck rewrite before a review.',
+    strengthenedBy: 'a fourth deck rewrite before the sequoia call.',
     reasoning: 'rework spikes when the underlying decision feels unresolved, not when stakes are simply high.',
-    related: ['pitch nerves', 'antler'],
+    related: ['pitch nerves', 'sequoia'],
   },
   {
-    id: 'priya',
+    id: 'raghav',
     confidence: 81,
     strengthened: '1 week ago',
-    statement: "you trust priya's judgement more than your own on pricing.",
-    consequence: 'i flagged the pricing slide for priya before the review, not for you.',
-    evidence: ['4 pricing debates', 'past decisions reversed in her favor'],
-    counter: ['one pricing call you held against her'],
+    statement: 'you trust raghav on product, but push back on pricing.',
+    consequence: 'i flagged the pricing slide for raghav before the call, not for you.',
+    evidence: ['4 pricing debates', 'product calls you ceded to him'],
+    counter: ['one pricing call you held against him'],
     history: [68, 74, 79, 81],
-    strengthenedBy: 'you deferred to her on the enterprise tier last week.',
-    reasoning: 'on pricing specifically, your final calls track hers — not on product, where you lead.',
-    related: ['priya', 'donna'],
+    strengthenedBy: 'you deferred to him on the enterprise tier last week.',
+    reasoning: 'on product your final calls track his; on pricing you hold your own line.',
+    related: ['raghav', 'poke'],
   },
   {
     id: 'outreach',
@@ -188,9 +188,9 @@ export const BELIEFS = [
     evidence: ['delayed intros', 'postponed investor emails', 'recruiting outreach gaps'],
     counter: ['cold outreach you sent the week the demo landed'],
     history: [71, 75, 79, 82],
-    strengthenedBy: 'the postponed antler email while the deck still felt off.',
+    strengthenedBy: 'the postponed sequoia intro while the deck still felt off.',
     reasoning: 'outreach stalls track narrative confidence, not your comfort with reaching out.',
-    related: ['antler', 'the raise'],
+    related: ['sequoia', 'the raise'],
   },
 ]
 
@@ -200,7 +200,7 @@ export const OPEN_QUESTIONS = [
   {
     id: 'q1',
     confidence: 61,
-    question: 'does your stress come from the reviews, or from the lost sleep?',
+    question: 'does your stress come from the pitches, or from the lost sleep?',
     status: 'evidence supports both — they move together.',
     leaning: 'leaning sleep, but i can\'t separate them yet.',
   },
@@ -214,7 +214,7 @@ export const OPEN_QUESTIONS = [
   {
     id: 'q3',
     confidence: 54,
-    question: 'does priya improve your decision quality, or just your confidence?',
+    question: 'does raghav improve your decision quality, or just your confidence?',
     status: 'still uncertain.',
     leaning: 'too early to call.',
   },
@@ -238,7 +238,7 @@ export const REVISIONS = [
 
 // Pre-loaded chat thread showing cross-surface memory + source labels.
 export const CHAT_HISTORY = [
-  { from: 'donna', source: 'WhatsApp', item: { type: 'text', text: 'we were on your antler deck yesterday — the market-size slide.' } },
+  { from: 'donna', source: 'WhatsApp', item: { type: 'text', text: 'we were on your sequoia deck yesterday — the market-size slide.' } },
   { from: 'user', item: { type: 'text', text: 'yeah it still feels flat' } },
   {
     from: 'donna',

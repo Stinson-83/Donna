@@ -7,7 +7,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 function scriptedReply(message) {
   const m = message.toLowerCase()
 
-  if (/(antler|deck|pitch|yc|slide|market)/.test(m)) {
+  if (/(sequoia|deck|pitch|raise|slide|market)/.test(m)) {
     return [
       { type: 'delay', seconds: 0.9 },
       {
@@ -35,12 +35,12 @@ function scriptedReply(message) {
       { type: 'delay', seconds: 0.9 },
       {
         type: 'memory',
-        text: 'current hypothesis: your sleep dropped before the stress did, so this reads more like the review than the workload.\n\ni might be wrong, though — the two move together, so the evidence is mixed.',
+        text: 'current hypothesis: your sleep dropped before the stress did, so this reads more like the pitch than the workload.\n\ni might be wrong, though — the two move together, so the evidence is mixed.',
       },
-      { type: 'thread', chain: ['sleep', 'stress', 'the review'] },
+      { type: 'thread', chain: ['sleep', 'stress', 'the pitch'] },
       {
         type: 'open_question',
-        question: 'is the stress from the reviews, or from the lost sleep?',
+        question: 'is the stress from the pitches, or from the lost sleep?',
         status: 'evidence supports both. leaning sleep, ~61%.',
       },
       { type: 'text', text: 'either way, protecting tonight helps. 11pm.' },
@@ -58,7 +58,7 @@ function scriptedReply(message) {
         statement: "you overprepare when you're uncertain",
         from: 82,
         to: 84,
-        reason: 'this is the fourth deck rewrite before a review.',
+        reason: 'this is the fourth deck rewrite before the sequoia call.',
       },
       { type: 'text', text: "trust the story. you've done this before." },
     ]
@@ -93,8 +93,8 @@ function scriptedReply(message) {
   if (/(forget|forgetting|pending|loose|loop|todo|owe)/.test(m)) {
     return [
       { type: 'delay', seconds: 0.7 },
-      { type: 'text', text: "three things open: reply to luca, the antler form (due fri), and you said you'd call your mom." },
-      { type: 'text', text: 'the antler form is the only one with a deadline. start there?' },
+      { type: 'text', text: "three things open: reply to the sequoia partner, send the data room (due fri), and you said you'd call your mom." },
+      { type: 'text', text: 'the data room is the only one with a deadline. start there?' },
     ]
   }
   if (/(nervous|anxious|scared|stress|panic|overwhelm|worried)/.test(m)) {
