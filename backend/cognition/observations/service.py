@@ -1,10 +1,14 @@
-"""Observation engine — beliefs do not come straight from memories; they emerge
-from observations *across* memories. This is a small, transparent pattern miner:
-each rule matches topics/keywords on a memory and emits an observation that
-implies a candidate belief (with a polarity and a source quality).
+"""Observation engine.
 
-Deterministic and offline. Swap the rule list for an LLM extractor later; the
-downstream belief/question engines don't change.
+`add_observation` / `list_observations` are LIVE — the BRAIN's `form_belief` tool
+writes observations through them, and the belief engine reads them.
+
+The keyword RULES + `derive` + `generate_for_memory` are RETIRED from the live
+path. They were the deterministic pattern miner that turned the demo's crafted
+memories into observations; real belief formation now happens in the BRAIN loop
+(form_belief), which supplies LLM-judged observations directly. The miner is kept
+only because `seed.py` (and its tests) still use it to build the showcase user —
+it runs solely when a caller passes `mine=True` to `pipeline.ingest`.
 """
 from __future__ import annotations
 

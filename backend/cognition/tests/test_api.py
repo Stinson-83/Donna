@@ -9,9 +9,9 @@ from backend.cognition.pipeline import ingest
 async def _seed_min(cogdb):
     async with cogdb() as s:
         await ingest(s, user_id="demo-aarav", content="slept 6h before the review, stressed",
-                     source_type="whatsapp", topics=["sleep", "review"], entities=["sleep"])
+                     source_type="whatsapp", topics=["sleep", "review"], entities=["sleep"], mine=True)
         await ingest(s, user_id="demo-aarav", content="deep work block before noon again",
-                     source_type="donna_app", topics=["focus", "deep-work"], entities=["focus"])
+                     source_type="donna_app", topics=["focus", "deep-work"], entities=["focus"], mine=True)
         await s.commit()
 
 

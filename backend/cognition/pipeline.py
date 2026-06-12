@@ -1,9 +1,13 @@
 """Ingestion pipeline — the chat/journal/voice surface that updates Donna's model.
 
-Every inbound message can update the memory store, the observation set, beliefs,
-questions, and the relationship graph. This is what makes the product *learn*:
+Every inbound message updates the memory store and the relationship graph:
 
-    content → memory → observations → beliefs → questions → graph
+    content → memory → graph
+
+Belief formation is no longer mined by keyword here. It happens in the BRAIN
+loop via the `form_belief` tool, which writes observations + recomputes beliefs
+with real (LLM) judgement. The old keyword miner is retained ONLY for seeding the
+demo (`seed.py`) and its tests — pass `mine=True` to opt into it.
 """
 from __future__ import annotations
 
@@ -30,6 +34,7 @@ async def ingest(
     topics: list[str] | None = None,
     entities: list[str] | None = None,
     importance: float = 0.5,
+    mine: bool = False,
 ) -> dict:
     mem = await add_memory(
         session,
@@ -42,13 +47,16 @@ async def ingest(
         importance=importance,
     )
 
-    observations = await generate_for_memory(session, user_id, mem)
-
+    # Belief formation is the BRAIN's job now (form_belief). The keyword miner
+    # only runs when explicitly opted in — i.e. seeding the demo.
+    observations = []
     beliefs = []
-    for subject in {o.subject for o in observations}:
-        b = await recompute_subject(session, user_id, subject, reason="a new memory")
-        if b:
-            beliefs.append(b)
+    if mine:
+        observations = await generate_for_memory(session, user_id, mem)
+        for subject in {o.subject for o in observations}:
+            b = await recompute_subject(session, user_id, subject, reason="a new memory")
+            if b:
+                beliefs.append(b)
 
     # weave entities into the graph
     if entities:

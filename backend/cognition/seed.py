@@ -81,9 +81,10 @@ async def seed(user_id: str = DEFAULT_USER) -> None:
         await recompute_subject(session, user_id, "mornings", reason="early read")
         await session.commit()
 
-        # Ingest the real memories through the full pipeline.
+        # Ingest the demo memories through the keyword miner (mine=True) — this
+        # is the one place the legacy miner still runs, to build the showcase.
         for content, st, topics, entities in MEMORIES:
-            await ingest(session, user_id=user_id, content=content, source_type=st, topics=topics, entities=entities, importance=0.6)
+            await ingest(session, user_id=user_id, content=content, source_type=st, topics=topics, entities=entities, importance=0.6, mine=True)
         await session.commit()
 
         # Consequences — beliefs that changed a recommendation.

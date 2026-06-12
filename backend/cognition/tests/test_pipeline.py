@@ -15,7 +15,7 @@ async def test_belief_forms_from_memory(cogdb):
     async with cogdb() as s:
         await ingest(
             s, user_id="u", content="slept ~6h before the review and felt stressed",
-            source_type="whatsapp", topics=["sleep", "review"], entities=["sleep"],
+            source_type="whatsapp", topics=["sleep", "review"], entities=["sleep"], mine=True,
         )
         await s.commit()
         b = await get_belief_by_subject(s, "u", "sleep_stress")
@@ -28,11 +28,11 @@ async def test_belief_forms_from_memory(cogdb):
 @pytest.mark.asyncio
 async def test_more_evidence_strengthens(cogdb):
     async with cogdb() as s:
-        await ingest(s, user_id="u", content="deep work before noon", source_type="donna_app", topics=["focus"])
+        await ingest(s, user_id="u", content="deep work before noon", source_type="donna_app", topics=["focus"], mine=True)
         await s.commit()
         first = (await get_belief_by_subject(s, "u", "mornings")).confidence
         for _ in range(3):
-            await ingest(s, user_id="u", content="another morning deep-work block", source_type="donna_app", topics=["focus", "deep-work"])
+            await ingest(s, user_id="u", content="another morning deep-work block", source_type="donna_app", topics=["focus", "deep-work"], mine=True)
         await s.commit()
         later = (await get_belief_by_subject(s, "u", "mornings")).confidence
         assert later >= first
@@ -54,7 +54,7 @@ async def test_belief_revision_is_recorded(cogdb):
 
         await ingest(
             s, user_id="u", content="postponed the investor email, the narrative feels weak",
-            source_type="whatsapp", topics=["email", "weak"], entities=["antler"],
+            source_type="whatsapp", topics=["email", "weak"], entities=["antler"], mine=True,
         )
         await s.commit()
         after = await get_belief_by_subject(s, "u", "outreach")
