@@ -119,7 +119,12 @@ async def maybe_surface_email(
 ) -> None:
     ctx = await _build_scoring_context(user_id)
     score = score_email(msg, ctx)
-    if score.score < THRESHOLD:
+
+    # Cap 20: if the user keeps dismissing email heads-ups, raise the bar for them.
+    from backend.knowledge.feedback import email_threshold_bump
+
+    threshold = THRESHOLD + await email_threshold_bump(user_id)
+    if score.score < threshold:
         return
 
     decision = await can_fire_proactive(user_id, source="email")

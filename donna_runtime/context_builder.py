@@ -70,7 +70,14 @@ async def load_user_model_block(user_id: str | None) -> str:
         goals = (await render_goals_block(user_id)).strip()
     except Exception:
         logger.exception("load_user_model_block: goals render failed")
-    return "\n\n".join(part for part in (facts, goals) if part)
+    learned = ""
+    try:
+        from backend.knowledge.feedback import render_feedback_block
+
+        learned = (await render_feedback_block(user_id)).strip()
+    except Exception:
+        logger.exception("load_user_model_block: feedback render failed")
+    return "\n\n".join(part for part in (facts, goals, learned) if part)
 
 
 @dataclass(frozen=True)
