@@ -1,4 +1,5 @@
-// Design-spec navigation (donna-design-spec): Dashboard / Live / Memory / History.
+// Design-spec navigation (donna-design-spec): Dashboard / Live / History.
+// (Memory tab parked — backend + MemoryPage stay; re-add the icon + tab to resurface.)
 // Single-weight stroke icons + label; rust marks the active tab.
 const ICON = {
   dashboard: (
@@ -12,13 +13,6 @@ const ICON = {
       <path d="M21 11.5a8.4 8.4 0 0 1-8.5 8.3 8.8 8.8 0 0 1-3.9-.9L3 20l1.2-5.3a8 8 0 0 1-.7-3.2A8.4 8.4 0 0 1 12 3.2a8.4 8.4 0 0 1 9 8.3z" />
     </svg>
   ),
-  memory: (
-    // a small constellation — "what donna knows" (mirrors the MemoryPage hero)
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="12" cy="12" r="2.3" /><circle cx="5" cy="6" r="1.5" /><circle cx="19" cy="7" r="1.5" /><circle cx="7.5" cy="19" r="1.5" />
-      <path d="M10.1 10.6 6.2 7.2M14 11.1 17.5 8.2M11 14 8.4 17.4" />
-    </svg>
-  ),
   history: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
       <circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 3" />
@@ -29,7 +23,6 @@ const ICON = {
 const TABS = [
   { key: 'dashboard', label: 'Dashboard' },
   { key: 'live', label: 'Live' },
-  { key: 'memory', label: 'Memory' },
   { key: 'history', label: 'History' },
 ]
 

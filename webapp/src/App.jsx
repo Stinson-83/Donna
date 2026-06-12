@@ -9,11 +9,13 @@ import Onboarding from './components/Onboarding.jsx'
 import Drawer from './components/Drawer.jsx'
 import TodayPage from './pages/TodayPage.jsx'
 import LivePage from './pages/LivePage.jsx'
-import MemoryPage from './pages/MemoryPage.jsx'
 import HistoryPage from './pages/HistoryPage.jsx'
 import { hasIdentity, getUserId } from './identity.js'
 
-const PAGES = { dashboard: TodayPage, live: LivePage, memory: MemoryPage, history: HistoryPage }
+// Memory tab is parked for now (backend + MemoryPage stay; just not surfaced).
+// To resurface: re-import MemoryPage, add `memory: MemoryPage` here, and restore
+// the memory entry in TabBar.
+const PAGES = { dashboard: TodayPage, live: LivePage, history: HistoryPage }
 
 export default function App() {
   const [tab, setTab] = useState('dashboard')
