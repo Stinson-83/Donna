@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { getLibrary, getSettings, setNotifyChannel } from '../cards.js'
+import { doneTodo, getLibrary, getSettings, getTodos, getTrackers, retireTracker, setNotifyChannel } from '../cards.js'
 
 // The Library drawer (donna-design-spec/reference/dashboard-v3 — the menu panel).
 // "everything she's holding for you": real counts of people, documents, trackers
@@ -29,7 +29,7 @@ function Chevron() {
 
 export default function Drawer({ open, onClose, onNavigate }) {
   const [lib, setLib] = useState(null)
-  const [view, setView] = useState('browse') // browse | settings
+  const [view, setView] = useState('browse') // browse | settings | todos | trackers
 
   useEffect(() => {
     if (open) getLibrary().then(setLib).catch(() => {})
@@ -57,8 +57,12 @@ export default function Drawer({ open, onClose, onNavigate }) {
       >
         {view === 'settings' ? (
           <SettingsView onBack={() => setView('browse')} />
+        ) : view === 'todos' ? (
+          <TodosView onBack={() => setView('browse')} />
+        ) : view === 'trackers' ? (
+          <TrackersView onBack={() => setView('browse')} />
         ) : (
-          <Browse lib={lib} onClose={onClose} onNavigate={onNavigate} onSettings={() => setView('settings')} />
+          <Browse lib={lib} onClose={onClose} onNavigate={onNavigate} onOpen={setView} />
         )}
       </aside>
     </>
@@ -83,7 +87,7 @@ function Row({ name, count, onClick, active }) {
   )
 }
 
-function Browse({ lib, onClose, onNavigate, onSettings }) {
+function Browse({ lib, onClose, onNavigate, onOpen }) {
   const n = (v) => (v == null ? '—' : v)
   const plural = (v, one, many) => (v === 1 ? one : many)
 
@@ -105,14 +109,14 @@ function Browse({ lib, onClose, onNavigate, onSettings }) {
         <Row name="Today" count="the live view" active onClick={goToday} />
         <Row name="People" count={lib ? `${n(lib.people)} ${plural(lib.people, 'person', 'people')}` : null} />
         <Row name="Documents" count={lib ? `${n(lib.documents)} ${plural(lib.documents, 'file', 'files')}` : null} />
-        <Row name="Trackers" count={lib ? `${n(lib.trackers)} active` : null} />
-        <Row name="To-dos" count={lib ? `${n(lib.todos)} open` : null} />
+        <Row name="Trackers" count={lib ? `${n(lib.trackers)} active` : null} onClick={() => onOpen('trackers')} />
+        <Row name="To-dos" count={lib ? `${n(lib.todos)} open` : null} onClick={() => onOpen('todos')} />
         <Row name="Connected" count={lib ? `${n(lib.connected)} ${plural(lib.connected, 'account', 'accounts')}` : null} />
       </div>
 
       <div className="flex-shrink-0 border-t border-line px-3 pb-[calc(16px+env(safe-area-inset-bottom))] pt-3">
         <button
-          onClick={onSettings}
+          onClick={() => onOpen('settings')}
           className="flex w-full items-center gap-2.5 rounded-2xl px-3 py-3 text-left text-[13.5px] font-semibold text-soft transition active:bg-ink/5"
         >
           <svg className="h-[18px] w-[18px] text-faint" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -121,6 +125,133 @@ function Browse({ lib, onClose, onNavigate, onSettings }) {
           </svg>
           Settings
         </button>
+      </div>
+    </>
+  )
+}
+
+function SubHeader({ title, sub, onBack }) {
+  return (
+    <div className="flex flex-shrink-0 items-center gap-3 border-b border-line px-[18px] pb-4 pt-[calc(20px+env(safe-area-inset-top))]">
+      <button onClick={onBack} className="grid h-9 w-9 flex-shrink-0 place-items-center rounded-full border border-line bg-surface text-soft transition active:bg-ink/5">
+        <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M15 6l-6 6 6 6" />
+        </svg>
+      </button>
+      <div className="min-w-0">
+        <div className="font-serif text-[22px] leading-tight tracking-tight text-ink">{title}</div>
+        {sub && <div className="text-[11px] font-semibold text-faint">{sub}</div>}
+      </div>
+    </div>
+  )
+}
+
+const TRACKER_DOT = { reply: 'rgb(var(--accent))', flight: 'rgb(var(--rust))', web: '#C99A7E' }
+
+function TrackersView({ onBack }) {
+  const [items, setItems] = useState(null)
+
+  useEffect(() => {
+    getTrackers().then((r) => setItems(r.trackers || [])).catch(() => setItems([]))
+  }, [])
+
+  async function stop(id) {
+    const prev = items
+    setItems(items.filter((t) => t.id !== id))
+    try {
+      await retireTracker(id)
+    } catch {
+      setItems(prev) // revert on failure
+    }
+  }
+
+  return (
+    <>
+      <SubHeader title="Trackers" sub="what she's actively watching" onBack={onBack} />
+      <div className="scroll flex-1 overflow-y-auto px-[14px] py-3">
+        {items === null && <div className="px-3 pt-4 text-[13px] text-faint">loading…</div>}
+        {items?.length === 0 && (
+          <p className="px-3 pt-6 text-[13.5px] leading-relaxed lowercase text-soft">
+            nothing being watched yet. ask her to track a flight, an awaited reply, or a topic.
+          </p>
+        )}
+        <div className="space-y-2">
+          {items?.map((t) => (
+            <div key={t.id} className="flex items-center gap-3 rounded-2xl border border-line bg-surface px-3.5 py-3">
+              <span className="h-2 w-2 flex-shrink-0 rounded-full" style={{ background: TRACKER_DOT[t.type] || 'rgb(var(--faint))' }} />
+              <div className="min-w-0 flex-1">
+                <div className="truncate text-[14px] font-bold text-ink/85">{t.title}</div>
+                <div className="mt-px text-[11px] font-semibold uppercase tracking-wide text-faint">
+                  {t.type}{t.note ? ` · ${t.note}` : ''}
+                </div>
+              </div>
+              <button
+                onClick={() => stop(t.id)}
+                aria-label={`stop watching ${t.title}`}
+                className="flex-shrink-0 rounded-full border border-line px-2.5 py-1 text-[11px] font-semibold lowercase text-soft transition active:bg-ink/5"
+              >
+                stop
+              </button>
+            </div>
+          ))}
+        </div>
+      </div>
+    </>
+  )
+}
+
+function TodosView({ onBack }) {
+  const [items, setItems] = useState(null)
+
+  useEffect(() => {
+    getTodos().then((r) => setItems(r.todos || [])).catch(() => setItems([]))
+  }, [])
+
+  async function done(id) {
+    const prev = items
+    setItems(items.filter((t) => t.id !== id))
+    try {
+      await doneTodo(id)
+    } catch {
+      setItems(prev) // revert on failure
+    }
+  }
+
+  return (
+    <>
+      <SubHeader title="To-dos" sub="open commitments + admin tasks" onBack={onBack} />
+      <div className="scroll flex-1 overflow-y-auto px-[14px] py-3">
+        {items === null && <div className="px-3 pt-4 text-[13px] text-faint">loading…</div>}
+        {items?.length === 0 && (
+          <p className="px-3 pt-6 text-[13.5px] leading-relaxed lowercase text-soft">
+            all clear. anything you mention — a renewal, an rsvp, a follow-up — lands here.
+          </p>
+        )}
+        <div className="space-y-2">
+          {items?.map((t) => (
+            <div key={t.id} className="flex items-center gap-3 rounded-2xl border border-line bg-surface px-3.5 py-3">
+              <button
+                onClick={() => done(t.id)}
+                aria-label={`mark "${t.content}" done`}
+                className="grid h-[22px] w-[22px] flex-shrink-0 place-items-center rounded-full border border-line text-transparent transition hover:border-rust hover:text-rust active:bg-rust/10"
+              >
+                <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M5 12l5 5L20 6" />
+                </svg>
+              </button>
+              <div className="min-w-0 flex-1">
+                <div className="truncate text-[14px] font-semibold text-ink/85">{t.content}</div>
+                {(t.due || t.category) && (
+                  <div className="mt-px text-[11px] font-semibold text-faint">
+                    {t.due && <span className={t.overdue ? 'text-rust' : ''}>{t.due}</span>}
+                    {t.due && t.category ? ' · ' : ''}
+                    {t.category}
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     </>
   )
@@ -150,14 +281,7 @@ function SettingsView({ onBack }) {
 
   return (
     <>
-      <div className="flex flex-shrink-0 items-center gap-3 border-b border-line px-[18px] pb-4 pt-[calc(20px+env(safe-area-inset-top))]">
-        <button onClick={onBack} className="grid h-9 w-9 flex-shrink-0 place-items-center rounded-full border border-line bg-surface text-soft transition active:bg-ink/5">
-          <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M15 6l-6 6 6 6" />
-          </svg>
-        </button>
-        <div className="font-serif text-[22px] tracking-tight text-ink">Settings</div>
-      </div>
+      <SubHeader title="Settings" onBack={onBack} />
 
       <div className="scroll flex-1 overflow-y-auto px-[18px] py-5">
         <div className="mb-2.5 text-[10px] font-bold uppercase tracking-[0.09em] text-faint">reach me on</div>

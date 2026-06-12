@@ -41,3 +41,72 @@ async def test_library_counts(db, monkeypatch):
     assert out["trackers"] == 1   # only the active watch
     assert out["todos"] == 1
     assert out["connected"] == 1
+
+
+@pytest.mark.asyncio
+async def test_library_todos_detail_and_done(db):
+    from datetime import datetime, timedelta
+
+    from api.cards import library_todo_done, library_todos, TodoDoneBody
+    from api.push import resolve_user_id
+    from db.models import OpenLoop, utcnow
+
+    user_id = await resolve_user_id("+lib")
+    now = utcnow()
+    async with db() as s:
+        s.add_all([
+            OpenLoop(user_id=user_id, content="renew passport", status="active",
+                     due_date=now + timedelta(days=3), category="renewal"),
+            OpenLoop(user_id=user_id, content="reply to landlord", status="active"),
+            OpenLoop(user_id=user_id, content="old thing", status="closed"),
+        ])
+        await s.commit()
+
+    out = await library_todos(user="+lib")
+    contents = [t["content"] for t in out["todos"]]
+    assert contents == ["renew passport", "reply to landlord"]  # dated first, closed excluded
+    assert out["todos"][0]["due"] == "due in 3d"
+    assert out["todos"][0]["category"] == "renewal"
+
+    # mark done -> settles like close_open_loop, disappears from the list
+    res = await library_todo_done(TodoDoneBody(user="+lib", id=out["todos"][0]["id"]))
+    assert res["ok"] is True
+    out2 = await library_todos(user="+lib")
+    assert [t["content"] for t in out2["todos"]] == ["reply to landlord"]
+
+    # another user's todo can't be closed through this user
+    other_out = await library_todo_done(TodoDoneBody(user="+other2", id=out2["todos"][0]["id"]))
+    assert other_out["ok"] is False
+
+
+@pytest.mark.asyncio
+async def test_library_trackers_detail_and_retire(db):
+    from api.cards import library_tracker_retire, library_trackers, TrackerRetireBody
+    from api.push import resolve_user_id
+    from db.models import Watch
+
+    user_id = await resolve_user_id("+lib")
+    async with db() as s:
+        s.add_all([
+            Watch(user_id=user_id, watch_type="flight", subject_key="SQ516:2026-08-25",
+                  title="flight SQ516", importance=80,
+                  last_known_state={"status": "delayed", "flight_no": "SQ516"}),
+            Watch(user_id=user_id, watch_type="web", subject_key="arsenal", title="arsenal",
+                  importance=45, last_known_state={"seen_urls": ["a", "b"]}),
+        ])
+        await s.commit()
+
+    out = await library_trackers(user="+lib")
+    assert [t["title"] for t in out["trackers"]] == ["flight SQ516", "arsenal"]  # importance desc
+    assert out["trackers"][0]["note"] == "delayed"          # flight carries its status
+    assert out["trackers"][1]["note"] == "2 results seen"   # web carries its baseline size
+
+    # retire -> status flip via the watch system, gone from the list
+    res = await library_tracker_retire(TrackerRetireBody(user="+lib", id=out["trackers"][0]["id"]))
+    assert res["ok"] is True
+    out2 = await library_trackers(user="+lib")
+    assert [t["title"] for t in out2["trackers"]] == ["arsenal"]
+
+    # cross-user retire is refused
+    res2 = await library_tracker_retire(TrackerRetireBody(user="+other3", id=out2["trackers"][0]["id"]))
+    assert res2["ok"] is False

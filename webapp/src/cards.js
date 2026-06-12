@@ -156,6 +156,56 @@ export async function getLibrary(user = getUserId()) {
   return res.json()
 }
 
+// To-dos detail (admin tasks + open commitments), deadlined first.
+const MOCK_TODOS = [
+  { id: 'td1', content: 'renew passport', category: 'renewal', due: 'due in 3d', overdue: false },
+  { id: 'td2', content: "rsvp to priya's wedding", category: 'rsvp', due: 'due tomorrow', overdue: false },
+  { id: 'td3', content: 'reply to the landlord about the lease', category: null, due: null, overdue: false },
+]
+
+export async function getTodos(user = getUserId()) {
+  if (MOCK) return { todos: MOCK_TODOS }
+  const res = await fetch(`${API_BASE}/library/todos?user=${encodeURIComponent(user)}`)
+  if (!res.ok) throw new Error(`todos failed: ${res.status}`)
+  return res.json()
+}
+
+export async function doneTodo(id, user = getUserId()) {
+  if (MOCK) return { ok: true }
+  const res = await fetch(`${API_BASE}/library/todos/done`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ user, id }),
+  })
+  if (!res.ok) throw new Error(`todo done failed: ${res.status}`)
+  return res.json()
+}
+
+// Trackers detail (active watches incl. cadence + flight state).
+const MOCK_TRACKERS = [
+  { id: 'tr1', type: 'flight', title: 'flight SQ516', subject: 'SQ516:2026-08-25', importance: 80, note: 'delayed', next_check: null },
+  { id: 'tr2', type: 'reply', title: 'sequoia partner reply', subject: 'sequoia', importance: 90, note: null, next_check: null },
+  { id: 'tr3', type: 'web', title: 'arsenal', subject: 'arsenal', importance: 45, note: '12 results seen', next_check: null },
+]
+
+export async function getTrackers(user = getUserId()) {
+  if (MOCK) return { trackers: MOCK_TRACKERS }
+  const res = await fetch(`${API_BASE}/library/trackers?user=${encodeURIComponent(user)}`)
+  if (!res.ok) throw new Error(`trackers failed: ${res.status}`)
+  return res.json()
+}
+
+export async function retireTracker(id, user = getUserId()) {
+  if (MOCK) return { ok: true }
+  const res = await fetch(`${API_BASE}/library/trackers/retire`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ user, id }),
+  })
+  if (!res.ok) throw new Error(`tracker retire failed: ${res.status}`)
+  return res.json()
+}
+
 // Which surface Donna reaches you on: 'auto' | 'app' | 'whatsapp'.
 export async function getSettings(user = getUserId()) {
   if (MOCK) return { notify_channel: 'auto' }

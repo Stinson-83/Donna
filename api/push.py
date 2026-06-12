@@ -27,6 +27,10 @@ def _now():
 async def resolve_user_id(app_id: str) -> str:
     """Map the stable app id (phone key) to the User.id UUID, creating the user
     if needed — mirrors api.graph.user_lookup but without the full ingress state."""
+    # Resolve the session factory at call time (not the module-level binding) so a
+    # swapped db.session.async_session — the test fixture — is always honored.
+    from db.session import async_session
+
     app_id = (app_id or "web-demo").strip() or "web-demo"
     async with async_session() as s:
         row = await s.execute(select(User).where(User.phone == app_id))

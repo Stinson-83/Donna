@@ -225,3 +225,136 @@ async def library(user: str) -> dict:
         "todos": int(todos or 0),
         "connected": int(connected or 0),
     }
+
+
+@router.get("/library/todos")
+async def library_todos(user: str) -> dict:
+    """The To-dos detail list: active open loops, deadlined ones first (soonest
+    due at the top), then undated by recency."""
+    from sqlalchemy import select
+
+    from api.push import resolve_user_id
+    from db.models import OpenLoop, utcnow
+    from db.session import async_session
+
+    user_id = await resolve_user_id(user)
+    now = utcnow()
+    async with async_session() as s:
+        rows = (await s.execute(
+            select(OpenLoop).where(OpenLoop.user_id == user_id, OpenLoop.status == "active")
+            .order_by(OpenLoop.created_at.desc()).limit(100)
+        )).scalars().all()
+
+    dated = sorted([r for r in rows if r.due_date], key=lambda r: r.due_date)
+    undated = [r for r in rows if not r.due_date]
+
+    def _due(r):
+        if not r.due_date:
+            return None
+        days = (r.due_date.date() - now.date()).days
+        if days < 0:
+            return f"{-days}d overdue"
+        if days == 0:
+            return "due today"
+        if days == 1:
+            return "due tomorrow"
+        return f"due in {days}d"
+
+    return {
+        "user_id": user_id,
+        "todos": [{
+            "id": r.id,
+            "content": r.content,
+            "category": r.category,
+            "due": _due(r),
+            "overdue": bool(r.due_date and r.due_date.date() < now.date()),
+        } for r in dated + undated],
+    }
+
+
+class TodoDoneBody(BaseModel):
+    user: str
+    id: str
+
+
+@router.post("/library/todos/done")
+async def library_todo_done(body: TodoDoneBody) -> dict:
+    """Mark a to-do done. Same settle shape as the close_open_loop tool."""
+    from api.push import resolve_user_id
+    from db.models import OpenLoop, utcnow
+    from db.session import async_session
+
+    user_id = await resolve_user_id(body.user)
+    async with async_session() as s:
+        loop = await s.get(OpenLoop, body.id)
+        if loop is None or loop.user_id != user_id:
+            return {"ok": False}
+        loop.status = "closed"
+        loop.resolved_at = utcnow()
+        await s.commit()
+    return {"ok": True}
+
+
+@router.get("/library/trackers")
+async def library_trackers(user: str) -> dict:
+    """The Trackers detail list: active watches with their cadence + state, most
+    important first. A flight watch carries its last-known status."""
+    from sqlalchemy import select
+
+    from api.push import resolve_user_id
+    from db.models import Watch
+    from db.session import async_session
+
+    user_id = await resolve_user_id(user)
+    async with async_session() as s:
+        rows = (await s.execute(
+            select(Watch).where(Watch.user_id == user_id, Watch.status == "active")
+            .order_by(Watch.importance.desc(), Watch.created_at.desc()).limit(100)
+        )).scalars().all()
+
+    def _state_note(w):
+        st = w.last_known_state or {}
+        if w.watch_type == "flight" and st.get("status"):
+            return st["status"]
+        if w.watch_type == "web" and st.get("seen_urls") is not None:
+            return f"{len(st['seen_urls'])} results seen"
+        return None
+
+    return {
+        "user_id": user_id,
+        "trackers": [{
+            "id": w.id,
+            "type": w.watch_type,
+            "title": w.title,
+            "subject": w.subject_key,
+            "importance": w.importance,
+            "deadline": w.deadline.isoformat() if w.deadline else None,
+            "last_checked": w.last_checked_at.isoformat() if w.last_checked_at else None,
+            "next_check": w.next_check.isoformat() if w.next_check else None,
+            "note": _state_note(w),
+        } for w in rows],
+    }
+
+
+class TrackerRetireBody(BaseModel):
+    user: str
+    id: str
+
+
+@router.post("/library/trackers/retire")
+async def library_tracker_retire(body: TrackerRetireBody) -> dict:
+    """Stop watching. Uses the watch system's own retire (status flip, no delete)."""
+    from sqlalchemy import select
+
+    from api.push import resolve_user_id
+    from backend.proactive.watches import retire_watch
+    from db.models import Watch
+    from db.session import async_session
+
+    user_id = await resolve_user_id(body.user)
+    async with async_session() as s:
+        w = (await s.execute(select(Watch).where(Watch.id == body.id))).scalar_one_or_none()
+        if w is None or w.user_id != user_id:
+            return {"ok": False}
+    await retire_watch(body.id)
+    return {"ok": True}
