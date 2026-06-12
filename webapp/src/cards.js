@@ -206,6 +206,47 @@ export async function retireTracker(id, user = getUserId()) {
   return res.json()
 }
 
+// People detail (relationships from the living profile).
+const MOCK_PEOPLE = [
+  { name: 'Raghav', relation: 'co-founder', email: 'raghav@poke.dev', importance: 92, birthday: null, note: null },
+  { name: 'Mom', relation: 'family', email: null, importance: 88, birthday: '06-20', note: 'likes lilies' },
+  { name: 'A Partner', relation: null, email: 'partner@sequoia.com', importance: 80, birthday: null, note: 'prefers concise emails' },
+]
+
+export async function getPeople(user = getUserId()) {
+  if (MOCK) return { people: MOCK_PEOPLE }
+  const res = await fetch(`${API_BASE}/library/people?user=${encodeURIComponent(user)}`)
+  if (!res.ok) throw new Error(`people failed: ${res.status}`)
+  return res.json()
+}
+
+// Documents detail.
+const MOCK_DOCS = [
+  { id: 'd1', filename: 'lease-agreement.pdf', mime: 'application/pdf', size: '240 KB', status: 'ready', source: 'whatsapp', added: 'yesterday' },
+  { id: 'd2', filename: 'permit-balance.png', mime: 'image/png', size: '88 KB', status: 'ready', source: 'whatsapp', added: 'Aug 12' },
+]
+
+export async function getDocuments(user = getUserId()) {
+  if (MOCK) return { documents: MOCK_DOCS }
+  const res = await fetch(`${API_BASE}/library/documents?user=${encodeURIComponent(user)}`)
+  if (!res.ok) throw new Error(`documents failed: ${res.status}`)
+  return res.json()
+}
+
+// Connected accounts detail.
+const MOCK_CONNECTED = [
+  { provider: 'google', product: 'googlecalendar', status: 'connected', healthy: true, synced: 'today', error: null },
+  { provider: 'google', product: 'gmail', status: 'connected', healthy: true, synced: 'today', error: null },
+  { provider: 'composio', product: 'github', status: 'pending', healthy: false, synced: null, error: null },
+]
+
+export async function getConnected(user = getUserId()) {
+  if (MOCK) return { connected: MOCK_CONNECTED }
+  const res = await fetch(`${API_BASE}/library/connected?user=${encodeURIComponent(user)}`)
+  if (!res.ok) throw new Error(`connected failed: ${res.status}`)
+  return res.json()
+}
+
 // Which surface Donna reaches you on: 'auto' | 'app' | 'whatsapp'.
 export async function getSettings(user = getUserId()) {
   if (MOCK) return { notify_channel: 'auto' }

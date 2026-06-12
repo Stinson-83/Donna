@@ -110,3 +110,61 @@ async def test_library_trackers_detail_and_retire(db):
     # cross-user retire is refused
     res2 = await library_tracker_retire(TrackerRetireBody(user="+other3", id=out2["trackers"][0]["id"]))
     assert res2["ok"] is False
+
+
+@pytest.mark.asyncio
+async def test_library_people_detail(db):
+    from sqlalchemy import select
+
+    from api.cards import library_people
+    from api.push import resolve_user_id
+    from db.models import User
+
+    user_id = await resolve_user_id("+lib")
+    async with db() as s:
+        u = (await s.execute(select(User).where(User.id == user_id))).scalar_one()
+        u.living_profile = {"biography": {"relationships": [
+            {"name": "Raghav", "email": "r@poke.dev", "importance": 90},
+            {"name": "Mom", "importance": 95, "birthday": "06-20", "note": "likes lilies"},
+        ]}}
+        await s.commit()
+
+    out = await library_people(user="+lib")
+    names = [p["name"] for p in out["people"]]
+    assert names == ["Mom", "Raghav"]            # importance desc
+    assert out["people"][0]["birthday"] == "06-20"
+    assert out["people"][0]["note"] == "likes lilies"
+    assert out["people"][1]["email"] == "r@poke.dev"
+
+
+@pytest.mark.asyncio
+async def test_library_documents_and_connected_detail(db):
+    from datetime import timedelta
+
+    from api.cards import library_connected, library_documents
+    from api.push import resolve_user_id
+    from db.models import Document, Integration, utcnow
+
+    user_id = await resolve_user_id("+lib")
+    now = utcnow()
+    async with db() as s:
+        s.add_all([
+            Document(user_id=user_id, storage_path="/d/new", filename="lease.pdf",
+                     mime_type="application/pdf", file_size_bytes=240_000,
+                     processing_status="ready", created_at=now),
+            Document(user_id=user_id, storage_path="/d/old", filename="permit.png",
+                     processing_status="processing", created_at=now - timedelta(days=2)),
+            Integration(user_id=user_id, provider="google", product="googlecalendar",
+                        status="connected", last_synced_at=now),
+            Integration(user_id=user_id, provider="composio", product="github", status="pending"),
+        ])
+        await s.commit()
+
+    docs = await library_documents(user="+lib")
+    assert [d["filename"] for d in docs["documents"]] == ["lease.pdf", "permit.png"]  # newest first
+    assert docs["documents"][0]["added"] == "today" and docs["documents"][0]["size"] == "234 KB"
+    assert docs["documents"][1]["status"] == "processing"
+
+    conn = await library_connected(user="+lib")
+    healthy = {c["product"]: c["healthy"] for c in conn["connected"]}
+    assert healthy == {"googlecalendar": True, "github": False}  # pending isn't healthy

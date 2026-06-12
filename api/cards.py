@@ -358,3 +358,128 @@ async def library_tracker_retire(body: TrackerRetireBody) -> dict:
             return {"ok": False}
     await retire_watch(body.id)
     return {"ok": True}
+
+
+def _added(dt, now) -> str | None:
+    if not dt:
+        return None
+    days = (now.date() - dt.date()).days
+    if days <= 0:
+        return "today"
+    if days == 1:
+        return "yesterday"
+    if days < 7:
+        return f"{days}d ago"
+    return dt.strftime("%b %d")
+
+
+@router.get("/library/people")
+async def library_people(user: str) -> dict:
+    """The People detail: relationships from the living profile, most important
+    first, with whatever Donna knows (relation, email, birthday, a note)."""
+    from sqlalchemy import select
+
+    from api.push import resolve_user_id
+    from db.models import User
+    from db.session import async_session
+
+    user_id = await resolve_user_id(user)
+    async with async_session() as s:
+        u = (await s.execute(select(User).where(User.id == user_id))).scalar_one_or_none()
+
+    rels = []
+    if u is not None and isinstance(u.living_profile, dict):
+        rels = (u.living_profile.get("biography") or {}).get("relationships") or []
+
+    def _f(r, *keys):
+        for k in keys:
+            v = r.get(k)
+            if v:
+                return v
+        return None
+
+    people = []
+    for r in rels:
+        if not isinstance(r, dict):
+            continue
+        people.append({
+            "name": r.get("name") or "someone",
+            "relation": _f(r, "relation", "role", "relationship"),
+            "email": _f(r, "email", "_email"),
+            "birthday": _f(r, "birthday", "birthday_date"),
+            "importance": int(r.get("importance") or 0),
+            "note": _f(r, "note", "notes", "prefs", "preferences"),
+        })
+    people.sort(key=lambda p: -p["importance"])
+    return {"user_id": user_id, "people": people}
+
+
+@router.get("/library/documents")
+async def library_documents(user: str) -> dict:
+    """The Documents detail: files Donna holds, most recent first."""
+    from sqlalchemy import select
+
+    from api.push import resolve_user_id
+    from db.models import Document, utcnow
+    from db.session import async_session
+
+    user_id = await resolve_user_id(user)
+    now = utcnow()
+    async with async_session() as s:
+        rows = (await s.execute(
+            select(Document).where(Document.user_id == user_id)
+            .order_by(Document.created_at.desc()).limit(100)
+        )).scalars().all()
+
+    def _size(n):
+        if not n:
+            return None
+        if n < 1024:
+            return f"{n} B"
+        if n < 1024 * 1024:
+            return f"{n // 1024} KB"
+        return f"{n / (1024 * 1024):.1f} MB"
+
+    return {
+        "user_id": user_id,
+        "documents": [{
+            "id": d.id,
+            "filename": d.filename,
+            "mime": d.mime_type,
+            "size": _size(d.file_size_bytes),
+            "status": d.processing_status,
+            "source": d.source,
+            "added": _added(d.created_at, now),
+        } for d in rows],
+    }
+
+
+@router.get("/library/connected")
+async def library_connected(user: str) -> dict:
+    """The Connected detail: integrations and their health (the source of truth is
+    the integrations table, per the model)."""
+    from sqlalchemy import select
+
+    from api.push import resolve_user_id
+    from db.models import Integration, utcnow
+    from db.session import async_session
+
+    user_id = await resolve_user_id(user)
+    now = utcnow()
+    async with async_session() as s:
+        rows = (await s.execute(
+            select(Integration).where(Integration.user_id == user_id)
+            .order_by(Integration.created_at.asc())
+        )).scalars().all()
+
+    return {
+        "user_id": user_id,
+        "connected": [{
+            "provider": i.provider,
+            "product": i.product,
+            "status": i.status,
+            "healthy": bool(i.status == "connected" and not i.last_error),
+            "synced": _added(i.last_synced_at, now),
+            "error": i.last_error,
+        } for i in rows],
+    }

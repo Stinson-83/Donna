@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { doneTodo, getLibrary, getSettings, getTodos, getTrackers, retireTracker, setNotifyChannel } from '../cards.js'
+import { doneTodo, getConnected, getDocuments, getLibrary, getPeople, getSettings, getTodos, getTrackers, retireTracker, setNotifyChannel } from '../cards.js'
 
 // The Library drawer (donna-design-spec/reference/dashboard-v3 — the menu panel).
 // "everything she's holding for you": real counts of people, documents, trackers
@@ -29,7 +29,7 @@ function Chevron() {
 
 export default function Drawer({ open, onClose, onNavigate }) {
   const [lib, setLib] = useState(null)
-  const [view, setView] = useState('browse') // browse | settings | todos | trackers
+  const [view, setView] = useState('browse') // browse | settings | todos | trackers | people | documents | connected
 
   useEffect(() => {
     if (open) getLibrary().then(setLib).catch(() => {})
@@ -61,6 +61,12 @@ export default function Drawer({ open, onClose, onNavigate }) {
           <TodosView onBack={() => setView('browse')} />
         ) : view === 'trackers' ? (
           <TrackersView onBack={() => setView('browse')} />
+        ) : view === 'people' ? (
+          <PeopleView onBack={() => setView('browse')} />
+        ) : view === 'documents' ? (
+          <DocumentsView onBack={() => setView('browse')} />
+        ) : view === 'connected' ? (
+          <ConnectedView onBack={() => setView('browse')} />
         ) : (
           <Browse lib={lib} onClose={onClose} onNavigate={onNavigate} onOpen={setView} />
         )}
@@ -107,11 +113,11 @@ function Browse({ lib, onClose, onNavigate, onOpen }) {
         <div className="mb-1.5 mt-3 px-3 text-[10px] font-bold uppercase tracking-[0.09em] text-faint">Browse</div>
 
         <Row name="Today" count="the live view" active onClick={goToday} />
-        <Row name="People" count={lib ? `${n(lib.people)} ${plural(lib.people, 'person', 'people')}` : null} />
-        <Row name="Documents" count={lib ? `${n(lib.documents)} ${plural(lib.documents, 'file', 'files')}` : null} />
+        <Row name="People" count={lib ? `${n(lib.people)} ${plural(lib.people, 'person', 'people')}` : null} onClick={() => onOpen('people')} />
+        <Row name="Documents" count={lib ? `${n(lib.documents)} ${plural(lib.documents, 'file', 'files')}` : null} onClick={() => onOpen('documents')} />
         <Row name="Trackers" count={lib ? `${n(lib.trackers)} active` : null} onClick={() => onOpen('trackers')} />
         <Row name="To-dos" count={lib ? `${n(lib.todos)} open` : null} onClick={() => onOpen('todos')} />
-        <Row name="Connected" count={lib ? `${n(lib.connected)} ${plural(lib.connected, 'account', 'accounts')}` : null} />
+        <Row name="Connected" count={lib ? `${n(lib.connected)} ${plural(lib.connected, 'account', 'accounts')}` : null} onClick={() => onOpen('connected')} />
       </div>
 
       <div className="flex-shrink-0 border-t border-line px-3 pb-[calc(16px+env(safe-area-inset-bottom))] pt-3">
@@ -249,6 +255,135 @@ function TodosView({ onBack }) {
                   </div>
                 )}
               </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </>
+  )
+}
+
+function Loading() {
+  return <div className="px-3 pt-4 text-[13px] text-faint">loading…</div>
+}
+
+function Empty({ children }) {
+  return <p className="px-3 pt-6 text-[13.5px] leading-relaxed lowercase text-soft">{children}</p>
+}
+
+const AV_COLORS = ['#7B5544', '#3D7A4E', '#B07A3E', '#5A6B8C', '#9C5A6B']
+
+function PeopleView({ onBack }) {
+  const [items, setItems] = useState(null)
+  useEffect(() => {
+    getPeople().then((r) => setItems(r.people || [])).catch(() => setItems([]))
+  }, [])
+
+  return (
+    <>
+      <SubHeader title="People" sub="who matters, and what she knows" onBack={onBack} />
+      <div className="scroll flex-1 overflow-y-auto px-[14px] py-3">
+        {items === null && <Loading />}
+        {items?.length === 0 && <Empty>no one yet. connect your calendar and i'll learn who matters.</Empty>}
+        <div className="space-y-2">
+          {items?.map((p, i) => {
+            const name = p.name || '?'
+            const sub = [p.relation, p.note || p.email].filter(Boolean).join(' · ')
+            return (
+              <div key={i} className="flex items-center gap-3 rounded-2xl border border-line bg-surface px-3.5 py-3">
+                <span
+                  className="grid h-9 w-9 flex-shrink-0 place-items-center rounded-full text-[14px] font-semibold text-white"
+                  style={{ background: AV_COLORS[name.charCodeAt(0) % AV_COLORS.length] }}
+                >
+                  {name[0].toUpperCase()}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <div className="truncate text-[14.5px] font-semibold text-ink/85">{name}</div>
+                  <div className="truncate text-[11.5px] text-faint">{sub || '—'}</div>
+                </div>
+                {p.birthday && (
+                  <span className="flex-shrink-0 rounded-full bg-rust/10 px-2 py-0.5 text-[10.5px] font-semibold text-rust">
+                    bday {p.birthday}
+                  </span>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      </div>
+    </>
+  )
+}
+
+function DocumentsView({ onBack }) {
+  const [items, setItems] = useState(null)
+  useEffect(() => {
+    getDocuments().then((r) => setItems(r.documents || [])).catch(() => setItems([]))
+  }, [])
+
+  return (
+    <>
+      <SubHeader title="Documents" sub="what she's holding for you" onBack={onBack} />
+      <div className="scroll flex-1 overflow-y-auto px-[14px] py-3">
+        {items === null && <Loading />}
+        {items?.length === 0 && <Empty>nothing yet. send her a file on whatsapp and it lands here.</Empty>}
+        <div className="space-y-2">
+          {items?.map((d) => (
+            <div key={d.id} className="flex items-center gap-3 rounded-2xl border border-line bg-surface px-3.5 py-3">
+              <span className="grid h-9 w-9 flex-shrink-0 place-items-center rounded-xl bg-ink/5 text-soft">
+                <svg className="h-[18px] w-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M14 3v5h5M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                </svg>
+              </span>
+              <div className="min-w-0 flex-1">
+                <div className="truncate text-[14px] font-semibold text-ink/85">{d.filename}</div>
+                <div className="truncate text-[11.5px] text-faint">{[d.added, d.size, d.source].filter(Boolean).join(' · ') || '—'}</div>
+              </div>
+              {d.status && d.status !== 'ready' && (
+                <span className="flex-shrink-0 rounded-full border border-line px-2 py-0.5 text-[10.5px] font-semibold lowercase text-soft">{d.status}</span>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    </>
+  )
+}
+
+const SVC_COLOR = { gmail: '#EA4335', googlecalendar: '#4285F4', google: '#4285F4', github: '#24292E', drive: '#0F9D58', slack: '#4A154B' }
+
+function ConnectedView({ onBack }) {
+  const [items, setItems] = useState(null)
+  useEffect(() => {
+    getConnected().then((r) => setItems(r.connected || [])).catch(() => setItems([]))
+  }, [])
+
+  function statusText(c) {
+    if (c.error) return c.error
+    if (c.status === 'connected') return c.synced ? `connected · synced ${c.synced}` : 'connected'
+    return c.status === 'pending' ? 'connecting…' : c.status
+  }
+
+  return (
+    <>
+      <SubHeader title="Connected" sub="the accounts she can see" onBack={onBack} />
+      <div className="scroll flex-1 overflow-y-auto px-[14px] py-3">
+        {items === null && <Loading />}
+        {items?.length === 0 && <Empty>nothing connected yet. link your google so she can see your calendar and mail.</Empty>}
+        <div className="space-y-2">
+          {items?.map((c, i) => (
+            <div key={i} className="flex items-center gap-3 rounded-2xl border border-line bg-surface px-3.5 py-3">
+              <span
+                className="grid h-9 w-9 flex-shrink-0 place-items-center rounded-full text-[13px] font-bold text-white"
+                style={{ background: SVC_COLOR[c.product] || SVC_COLOR[c.provider] || '#8A7A6A' }}
+              >
+                {(c.product || c.provider || '?')[0].toUpperCase()}
+              </span>
+              <div className="min-w-0 flex-1">
+                <div className="truncate text-[14px] font-semibold capitalize text-ink/85">{c.product || c.provider}</div>
+                <div className="truncate text-[11.5px] text-faint">{statusText(c)}</div>
+              </div>
+              <span className="h-2 w-2 flex-shrink-0 rounded-full" style={{ background: c.healthy ? '#3D7A4E' : 'rgb(var(--faint))' }} />
             </div>
           ))}
         </div>
