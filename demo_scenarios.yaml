@@ -1,0 +1,335 @@
+# Donna — Demo Scenarios (the executable storyboard)
+#
+# 23 shots from DEMO_VIDEO_PLAN.md, driven sequentially by demo_run.py. Each shot
+# tells the runner what surface to show, what to trigger, what Donna stages
+# (notification / card), what user action to simulate, and what to verify.
+#
+# Schema per shot:
+#   title:        human label
+#   at:           time-of-day overlay
+#   screen:       title | dashboard | whatsapp_lock | whatsapp_chat | island | live | end_card
+#   duration_s:   beat length (for --step pacing)
+#   vo:           narrator voiceover line
+#   trigger:
+#     type:       dashboard_open | investor_reply | finance_shortfall | meal_checkin |
+#                 recall | live_request | consent | ride_options | book_ride |
+#                 birthday_cross_connection | waste | day_close | title | end_card
+#     live_fn:    (live mode) the real backend function the runner invokes
+#   donna:
+#     notification: { surface: whatsapp|push, text: "..." }     # optional
+#     card:        { id, intent, header{label,ref}, body, actions[ {id,label,kind,tool?,args?,prompt?} ] }  # optional
+#     reply:       "Donna's confirming line after the action"    # optional
+#   user_action:   { type: tap|type|speak|scroll|longpress|none, target: <action_id>, text: "..." }
+#   expected:      { notification:{text}, card:{intent}, state: pending|acted|dismissed, screen, holding }
+#
+# Card action kinds: reopen (re-enter the loop), execute (run a tool), consent (OAuth),
+# dismiss / snooze. In scripted mode the runner settles the card and runs the real
+# (sandboxed) executor for execute-kinds; in live mode it routes through the loop +
+# resolve_card_action. Lines mirror DEMO_VIDEO_PLAN.md exactly (lowercase, specific).
+
+user: demo-mira
+
+shots:
+
+  shot_1:
+    title: The hook
+    at: ""
+    screen: title
+    duration_s: 4
+    vo: "Imagine the best chief of staff in the world. Now imagine she never sleeps, never forgets, and texts you first."
+    trigger: { type: title }
+
+  shot_2:
+    title: Dashboard reveal
+    at: "7:30am"
+    screen: dashboard
+    duration_s: 9
+    vo: "This is one Thursday in a founder's life. Twenty-three open threads. She's holding all of it."
+    trigger: { type: dashboard_open, live_fn: "api.cards.today + watchbar" }
+    user_action: { type: scroll }
+    expected: { screen: dashboard, holding: 23 }
+
+  shot_3:
+    title: The lock-screen ping
+    at: "8:42am"
+    screen: whatsapp_lock
+    duration_s: 6
+    vo: "Eight forty-two a.m. Out of a full inbox, she surfaces exactly one email."
+    trigger: { type: investor_reply, live_fn: "backend.integrations.proactive_email_trigger.maybe_surface_email(e_sequoia)" }
+    donna:
+      notification:
+        surface: whatsapp
+        text: "heads up. sequoia partner replied to your thread. they want your answer by EOD. the term sheet expires tomorrow at noon."
+    expected:
+      notification: { text: "heads up" }
+
+  shot_4:
+    title: Summary + reply options
+    at: "8:42am"
+    screen: whatsapp_chat
+    duration_s: 8
+    vo: "She read it, ranked it against everything else, and pre-drafted the three answers a founder would actually consider."
+    trigger: { type: investor_reply }
+    donna:
+      card:
+        id: c_m2_sequoia
+        intent: heads_up
+        header: { label: "needs your eye", ref: "Sequoia · term sheet" }
+        body: "sequoia replied. they want an answer by **EOD**, and the term sheet expires **tomorrow at noon**."
+        actions:
+          - { id: a_accept, label: "accept the terms", kind: reopen, prompt: "draft a reply accepting sequoia's terms" }
+          - { id: a_counter, label: "counter on valuation", kind: reopen, prompt: "draft a reply countering sequoia on valuation" }
+          - { id: a_ask48, label: "ask for 48 more hours", kind: reopen, prompt: "draft a reply asking sequoia for 48 more hours" }
+    user_action: { type: none }
+    expected: { card: { intent: heads_up }, state: pending }
+
+  shot_5:
+    title: The draft + send
+    at: "8:42am"
+    screen: whatsapp_chat
+    duration_s: 4
+    vo: "One tap. The thing that could've cost her the round, handled before nine."
+    trigger: { type: investor_reply }
+    user_action: { type: tap, target: a_counter }
+    donna: { reply: "sent." }
+    expected: { card: { intent: heads_up }, state: acted }
+
+  shot_6:
+    title: The shortfall card
+    at: "10:15am"
+    screen: whatsapp_chat
+    duration_s: 8
+    vo: "Nobody watches their balance against an auto-debit four days out. She does."
+    trigger: { type: finance_shortfall, live_fn: "backend.finance.trigger.maybe_surface_finance" }
+    donna:
+      card:
+        id: c_m3_aws
+        intent: approval
+        header: { label: "needs your approval", ref: "HDFC · auto-pay" }
+        body: "aws **47,200** auto-debits in 4 days. your hdfc current is **4,200** short."
+        actions:
+          - { id: a_transfer, label: "yes, transfer 5,000", kind: execute, tool: transfer, args: { from_account_id: acct_savings, to_account_id: acct_current, amount: 5000 } }
+          - { id: a_pause, label: "pause auto-pay", kind: dismiss }
+          - { id: a_tomorrow, label: "remind me tomorrow", kind: snooze }
+    expected: { card: { intent: approval }, state: pending }
+
+  shot_7:
+    title: Transfer + keep watching
+    at: "10:15am"
+    screen: whatsapp_chat
+    duration_s: 8
+    vo: "Math on her money, an action with consent, and she keeps watching. That's a bounce fee she'll never see."
+    trigger: { type: finance_shortfall }
+    user_action: { type: tap, target: a_transfer }
+    donna: { reply: "done. ₹5,000 moved. balance now ₹52,000. i'll keep watching the bill until it clears." }
+    expected: { card: { intent: approval }, state: acted }
+
+  shot_8:
+    title: She asks first
+    at: "1:42pm"
+    screen: whatsapp_chat
+    duration_s: 6
+    vo: "This is the part no app does. She starts the conversation."
+    trigger: { type: meal_checkin, live_fn: "backend.proactive.checks.maybe_checkin_meal" }
+    donna:
+      notification: { surface: whatsapp, text: "what did you have for lunch? updating your tracker." }
+    expected: { notification: { text: "what did you have for lunch" } }
+
+  shot_9:
+    title: Logged + the honest line
+    at: "1:42pm"
+    screen: whatsapp_chat
+    duration_s: 10
+    vo: "She does the math, and she's honest with you. Day three. The accountability you'd pay a coach two hundred a month for."
+    trigger: { type: meal_checkin }
+    user_action: { type: type, text: "biryani and sweet lassi" }
+    donna: { reply: "logged. ~1,840 cal so far. ~600 left for dinner. heads up — this is day 3 you've crossed your monday goal. want me to suggest a lighter dinner around 7?" }
+    expected: { notification: { text: "day 3" } }
+
+  shot_10:
+    title: Long-press, mid-scroll
+    at: "2:30pm"
+    screen: island
+    duration_s: 5
+    vo: "She lives everywhere you do. Even inside another app."
+    trigger: { type: recall }
+    user_action: { type: longpress }
+
+  shot_11:
+    title: The recall over Instagram
+    at: "2:30pm"
+    screen: island
+    duration_s: 9
+    vo: "A throwaway text from days ago. A side-plan she overheard. She kept both."
+    trigger: { type: recall, live_fn: "donna_runtime.tools.recall_about('lotus thai')" }
+    user_action: { type: speak, text: "donna, what was the restaurant aniroodh kept telling me about?" }
+    donna:
+      card:
+        id: c_m5_lotus
+        intent: tracker
+        header: { label: "from memory", ref: "Lotus Thai · holland village" }
+        body: "aniroodh texted you last tuesday: 'the pad see ew, mira. you have to.' you said you'd take ishaan there saturday."
+    expected: { card: { intent: tracker } }
+
+  shot_12:
+    title: Book it
+    at: "2:30pm"
+    screen: island
+    duration_s: 8
+    vo: "Memory, and execution, without ever leaving the app she was in."
+    trigger: { type: recall }
+    user_action: { type: speak, text: "yeah", target: a_book_table }
+    donna:
+      card:
+        id: c_m5_book
+        intent: approval
+        header: { label: "book it", ref: "Lotus Thai · saturday" }
+        body: "table for two, saturday 8pm?"
+        actions:
+          - { id: a_book_table, label: "book it", kind: execute, tool: book_restaurant, args: { name: "Lotus Thai", party: 2 } }
+      reply: "booked · 8pm saturday · 2 people · OpenTable"
+    expected: { state: acted }
+
+  shot_13:
+    title: The ask (Live tab)
+    at: "4:00pm"
+    screen: live
+    duration_s: 6
+    vo: "This is the Live tab. Where you ask, and she acts."
+    trigger: { type: live_request }
+    user_action: { type: type, text: "book me a cab to changi t1 at 5:30am tomorrow." }
+    donna: { reply: "need access to your grab to book. one tap to allow?" }
+
+  shot_14:
+    title: Just-in-time consent
+    at: "4:00pm"
+    screen: live
+    duration_s: 7
+    vo: "Consent, exactly when it's needed. Not a settings menu she'll never open."
+    trigger: { type: consent }
+    donna:
+      card:
+        id: c_m6_consent
+        intent: consent_integration
+        header: { label: "connect grab", ref: "Grab" }
+        body: "donna will be able to book rides on your behalf and pay via your saved card."
+        actions:
+          - { id: a_allow, label: "allow", kind: consent, provider: grab }
+          - { id: a_notnow, label: "not now", kind: dismiss }
+    user_action: { type: tap, target: a_allow }
+    expected: { card: { intent: consent_integration }, state: acted }
+
+  shot_15:
+    title: Interactive ride cards
+    at: "4:00pm"
+    screen: live
+    duration_s: 9
+    vo: "Options, in line. And she already knows which one is hers."
+    trigger: { type: ride_options }
+    donna:
+      card:
+        id: c_m6_rides
+        intent: options
+        header: { label: "rides to changi t1", ref: "5:30am tomorrow" }
+        body: "grab premium · $42 · arrives 5:15 / **grab standard · $28 · arrives 5:12 · recommended, matches your usual** / grab share · $18 · arrives 5:08"
+        actions:
+          - { id: a_book_standard, label: "book standard", kind: execute, tool: book_ride, args: { service: "grab standard", dest: "Changi T1" } }
+    user_action: { type: tap, target: a_book_standard }
+    expected: { card: { intent: options }, state: acted }
+
+  shot_16:
+    title: Execute + sync
+    at: "4:00pm"
+    screen: dashboard
+    duration_s: 6
+    vo: "Booked, reminded, monitored. And the dashboard updates itself. The whole product, in one breath."
+    trigger: { type: book_ride, live_fn: "dashboard re-read /today" }
+    donna: { reply: "booked. driver assigned 5:00am. reminder set for 5:15am. i'll watch for delays." }
+    expected: { screen: dashboard }
+
+  shot_17:
+    title: Four memories collide
+    at: "6:15pm"
+    screen: whatsapp_chat
+    duration_s: 10
+    vo: "Her mom's birthday. The Saturday she just booked. The flowers her mom loves. Four memories, one decision. This is where investors lean in."
+    trigger: { type: birthday_cross_connection, live_fn: "backend.proactive.checks.maybe_surface_birthday" }
+    donna:
+      card:
+        id: c_m7_flowers
+        intent: approval
+        header: { label: "needs your approval", ref: "mom's birthday · saturday" }
+        body: "mom's birthday is saturday. you have lotus thai at 8pm with ishaan. her favorites: lilies. fnp delivers by 10am. send **₹1,899** bouquet?"
+        actions:
+          - { id: a_lilies, label: "yes, send lilies", kind: execute, tool: order_flowers, args: { item: lilies, amount: 1899, note: "happy birthday ma. love, mira." } }
+          - { id: a_other, label: "different flowers", kind: reopen, prompt: "suggest other flowers for mom" }
+          - { id: a_handle, label: "i'll handle it", kind: dismiss }
+    expected: { card: { intent: approval }, state: pending }
+
+  shot_18:
+    title: Sent + the pattern
+    at: "6:15pm"
+    screen: whatsapp_chat
+    duration_s: 8
+    vo: "'You usually do.' That's not storage. That's understanding."
+    trigger: { type: birthday_cross_connection }
+    user_action: { type: tap, target: a_lilies }
+    donna: { reply: "done. ₹1,899. delivery saturday 9-10am. card note: 'happy birthday ma. love, mira.' adding a reminder to call her at noon — you usually do." }
+    expected: { state: acted }
+
+  shot_19:
+    title: The audit
+    at: "7:48pm"
+    screen: whatsapp_chat
+    duration_s: 6
+    vo: "She audits the things you never do."
+    trigger: { type: waste, live_fn: "backend.finance.waste.maybe_surface_waste" }
+    donna:
+      card:
+        id: c_m8_spotify
+        intent: heads_up
+        header: { label: "money leak", ref: "Spotify · renews tomorrow" }
+        body: "spotify renews tomorrow. **₹229**. you used it twice this month. apple music handles the rest. cancel?"
+        actions:
+          - { id: a_cancel, label: "cancel", kind: execute, tool: cancel_subscription, args: { service: spotify } }
+          - { id: a_keep, label: "keep it", kind: dismiss }
+          - { id: a_next, label: "remind me next month", kind: snooze }
+    expected: { card: { intent: heads_up }, state: pending }
+
+  shot_20:
+    title: Cancelled + learned
+    at: "7:48pm"
+    screen: whatsapp_chat
+    duration_s: 6
+    vo: "And she gets smarter from every choice you make."
+    trigger: { type: waste }
+    user_action: { type: tap, target: a_cancel }
+    donna: { reply: "cancelled. ₹229/mo saved. i'll remember you preferred apple music." }
+    expected: { state: acted }
+
+  shot_21:
+    title: Today, done
+    at: "11:02pm"
+    screen: dashboard
+    duration_s: 8
+    vo: "Eight things, handled, in a single day."
+    trigger: { type: day_close }
+    user_action: { type: scroll }
+    expected: { screen: dashboard }
+
+  shot_22:
+    title: The moat
+    at: "11:02pm"
+    screen: dashboard
+    duration_s: 8
+    vo: "And eighteen hundred more before it. The longer she runs, the more she knows. That's the moat."
+    trigger: { type: day_close }
+    expected: { screen: dashboard }
+
+  shot_23:
+    title: End card
+    at: ""
+    screen: end_card
+    duration_s: 8
+    vo: "Donna. She doesn't wait to be asked. She texts first."
+    trigger: { type: end_card }
