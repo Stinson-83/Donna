@@ -39,51 +39,61 @@ export const PLAN = {
   whisper: 'you were nervous before the last pitch too. it went fine.',
 }
 
+// AREAS — the index of what Donna KNOWS about you, by domain. Not messages:
+// distilled knowledge that accrues over time. (History is the transcript; this
+// is what she's learned from it.)
 export const MEMORY_SECTIONS = [
-  { key: 'career', title: 'career', count: 12, summary: 'founder, building donna. ex-stripe (payments, 3 yrs).' },
-  { key: 'projects', title: 'projects', count: 7, summary: 'donna (active). antler SG batch. a paused side app.' },
-  { key: 'relationships', title: 'relationships', count: 9, summary: 'priya (cofounder), luca (mentor), mom — weekly calls.' },
-  { key: 'health', title: 'health', count: 5, summary: 'sleep runs thin under deadlines. runs to reset.' },
-  { key: 'goals', title: 'goals', count: 6, summary: 'raise a pre-seed. ship donna v1. sleep 7h+.' },
-  { key: 'preferences', title: 'preferences', count: 8, summary: 'blunt over polite. lowercase. mornings for deep work.' },
+  { key: 'work', title: 'work', count: 14, summary: 'building poke. raising a pre-seed from sequoia. cofounder raghav.' },
+  { key: 'people', title: 'people', count: 11, summary: 'raghav (cofounder), aniroodh (brother), priya, mom — sunday calls.' },
+  { key: 'the move', title: 'the move', count: 6, summary: 'relocating to waterloo in aug. permit + housing in motion.' },
+  { key: 'money', title: 'money', count: 8, summary: 'hdfc auto-pays; keeps a thin buffer until the round closes.' },
+  { key: 'health', title: 'health', count: 5, summary: 'sleep slips under deadlines. runs to reset.' },
+  { key: 'patterns', title: 'patterns', count: 9, summary: 'deep work before noon. overprepares when the story feels weak.' },
 ]
 
+// RECENT — the latest EVIDENCE she's filed. Each is a durable thing she learned
+// (with a confidence and the belief it supports), not a line of chat. This is the
+// difference from History: History scrolls; these compound into the constellation.
 export const MEMORY_RECENT = [
   {
     id: 'm1',
-    summary: 'preparing for the antler review on june 10; deck market-size slide is the weak point.',
+    summary: "sequoia's term sheet is the one to close before the waterloo move.",
     confidence: 'high',
     when: '2 days ago',
     source: 'WhatsApp',
-    related: ['the antler SG batch', 'pitch nerves pattern'],
-    supports: ['you overprepare when uncertain', 'you avoid outreach when the story feels weak'],
+    supports: ["you won't relocate with the round still open", 'you avoid outreach when the story feels weak'],
   },
   {
     id: 'm2',
-    summary: 'cofounder is priya; they disagree on pricing but resolve fast.',
+    summary: 'cofounder is raghav; you disagree on pricing but settle it fast.',
     confidence: 'high',
     when: '1 week ago',
     source: 'Donna App',
-    related: ['donna (project)', 'pricing debate'],
-    supports: ["you trust priya's judgement on pricing"],
+    supports: ['you trust raghav on product, push back on pricing'],
   },
   {
     id: 'm3',
-    summary: 'sleep drops to ~6h the week before any big milestone.',
+    summary: 'sleep drops to ~6h the week before any pitch.',
     confidence: 'medium',
     when: '2 weeks ago',
     source: 'Observed',
-    related: ['pitch nerves pattern', 'health'],
     supports: ['sleep predicts your stress better than workload'],
   },
   {
     id: 'm4',
-    summary: 'owes luca a reply since the intro to the antler partner.',
+    summary: 'aniroodh lands at changi on the 28th; you always do the airport run yourself.',
     confidence: 'high',
     when: '3 days ago',
     source: 'WhatsApp',
-    related: ['luca (mentor)', 'open loops'],
-    supports: ['you avoid outreach when the story feels weak'],
+    supports: ['you keep family time even mid-sprint'],
+  },
+  {
+    id: 'm5',
+    summary: 'deep work lands before noon; you keep meetings to the afternoon.',
+    confidence: 'high',
+    when: '4 days ago',
+    source: 'Journal',
+    supports: ['your best work happens before noon'],
   },
 ]
 

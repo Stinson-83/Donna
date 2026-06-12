@@ -8,22 +8,22 @@ import { useMemo, useState } from 'react'
 const YOU = { id: 'you', x: 50, y: 50 }
 
 const NODES = [
-  { id: 'donna', label: 'donna', x: 28, y: 27, weight: 1, recent: true },
-  { id: 'antler', label: 'antler', x: 72, y: 23, weight: 1, recent: true, supports: { belief: 'you avoid outreach when the story feels weak', conf: 74 } },
-  { id: 'priya', label: 'priya', x: 16, y: 55, weight: 0.92, supports: { belief: "you trust priya's judgement on pricing", conf: 81 } },
-  { id: 'luca', label: 'luca', x: 86, y: 52, weight: 0.82 },
+  { id: 'poke', label: 'poke', x: 28, y: 27, weight: 1, recent: true },
+  { id: 'sequoia', label: 'sequoia', x: 72, y: 23, weight: 1, recent: true, supports: { belief: 'you avoid outreach when the story feels weak', conf: 74 } },
+  { id: 'raghav', label: 'raghav', x: 16, y: 55, weight: 0.92, supports: { belief: 'you trust raghav on product, push back on pricing', conf: 82 } },
+  { id: 'aniroodh', label: 'aniroodh', x: 86, y: 52, weight: 0.82, supports: { belief: 'you keep family time even mid-sprint', conf: 77 } },
   { id: 'pitch', label: 'pitch nerves', x: 55, y: 13, weight: 0.86, recent: true, supports: { belief: 'you overprepare when uncertain', conf: 84 } },
   { id: 'sleep', label: 'sleep', x: 38, y: 86, weight: 0.84, supports: { belief: 'sleep predicts your stress better than workload', conf: 89 } },
-  { id: 'focus', label: 'focus', x: 81, y: 81, weight: 0.78, supports: { belief: 'your best work happens before noon', conf: 92 } },
-  { id: 'raise', label: 'the raise', x: 18, y: 84, weight: 0.78 },
+  { id: 'mornings', label: 'mornings', x: 81, y: 81, weight: 0.78, supports: { belief: 'your best work happens before noon', conf: 92 } },
+  { id: 'move', label: 'the move', x: 18, y: 84, weight: 0.78, supports: { belief: "you won't relocate with the round still open", conf: 73 } },
 ]
 
 const LINKS = [
   ...NODES.map((n) => ['you', n.id]),
-  ['donna', 'priya'],
-  ['antler', 'pitch'],
+  ['poke', 'raghav'],
+  ['sequoia', 'pitch'],
   ['pitch', 'sleep'],
-  ['antler', 'luca'],
+  ['sequoia', 'move'],
 ]
 
 const POS = Object.fromEntries([[YOU.id, YOU], ...NODES.map((n) => [n.id, n])])
