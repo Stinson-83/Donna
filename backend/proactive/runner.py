@@ -40,10 +40,12 @@ def default_checks() -> list[ProactiveCheck]:
         maybe_watch_interests,
     )
     from backend.proactive.prepare import maybe_prepare_upcoming
+    from backend.proactive.schedule_health import maybe_surface_schedule_issue
 
     return [
         maybe_surface_finance,
         maybe_surface_waste,
+        maybe_surface_schedule_issue,
         maybe_prepare_upcoming,
         maybe_surface_due_task,
         maybe_checkin_meal,
