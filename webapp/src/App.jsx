@@ -9,10 +9,11 @@ import Onboarding from './components/Onboarding.jsx'
 import Drawer from './components/Drawer.jsx'
 import TodayPage from './pages/TodayPage.jsx'
 import LivePage from './pages/LivePage.jsx'
+import MemoryPage from './pages/MemoryPage.jsx'
 import HistoryPage from './pages/HistoryPage.jsx'
 import { hasIdentity, getUserId } from './identity.js'
 
-const PAGES = { dashboard: TodayPage, live: LivePage, history: HistoryPage }
+const PAGES = { dashboard: TodayPage, live: LivePage, memory: MemoryPage, history: HistoryPage }
 
 export default function App() {
   const [tab, setTab] = useState('dashboard')
