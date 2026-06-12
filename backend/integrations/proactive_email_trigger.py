@@ -62,6 +62,7 @@ async def _build_scoring_context(user_id: str) -> ScoringContext:
     )
     relationships = list(biography.get("relationships") or [])
 
+    from backend.knowledge.context import context_keywords
     from backend.knowledge.goals import goal_keywords
 
     return ScoringContext(
@@ -72,6 +73,7 @@ async def _build_scoring_context(user_id: str) -> ScoringContext:
         ],
         recent_sent_thread_ids=set(),
         goal_keywords=await goal_keywords(user_id),
+        context_keywords=await context_keywords(user_id),
     )
 
 

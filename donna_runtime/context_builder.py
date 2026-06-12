@@ -77,7 +77,14 @@ async def load_user_model_block(user_id: str | None) -> str:
         learned = (await render_feedback_block(user_id)).strip()
     except Exception:
         logger.exception("load_user_model_block: feedback render failed")
-    return "\n\n".join(part for part in (facts, goals, learned) if part)
+    context = ""
+    try:
+        from backend.knowledge.context import render_context_block
+
+        context = (await render_context_block(user_id)).strip()
+    except Exception:
+        logger.exception("load_user_model_block: context render failed")
+    return "\n\n".join(part for part in (facts, goals, context, learned) if part)
 
 
 @dataclass(frozen=True)

@@ -75,6 +75,7 @@ Action (write side effects):
   watch — start a standing watch on a situation until it resolves (an awaited reply, a topic, a price)
   schedule — a one-shot future reminder or message at a given time
   track_goal — a goal the user is working toward; it shapes how you prioritize everything
+  set_focus — a time-bounded priority the user declares ("fundraising for 2 weeks"); weights what you surface/watch/prep until it expires
   track_interest — follow a team, company, stock, or topic; you monitor the web for it on your own
   track_task — an admin to-do or errand, optionally with a deadline; you remind before it's due
   track_flight — track a flight; surface delays, gate changes, cancellations, and the downstream knock-ons

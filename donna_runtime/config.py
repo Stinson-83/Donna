@@ -35,6 +35,7 @@ ALLOWED_TOOLS = (
     "mcp__donna__schedule",
     "mcp__donna__track_goal",
     "mcp__donna__track_interest",
+    "mcp__donna__set_focus",
     "mcp__donna__track_task",
     "mcp__donna__track_flight",
     # Belief formation — records conclusions about the user into the shared

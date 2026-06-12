@@ -68,6 +68,7 @@ async def rank_attention(user_id: str, *, now: datetime | None = None, limit: in
     from db.models import Card, utcnow
     from db.session import async_session
 
+    from backend.knowledge.context import active_contexts, context_weight
     from backend.knowledge.goals import goal_terms, list_active_goals
     from backend.knowledge.tasks import list_due_tasks
     from backend.proactive.watches import active_watches
@@ -85,6 +86,12 @@ async def rank_attention(user_id: str, *, now: datetime | None = None, limit: in
             if terms and any(t in low for t in terms):
                 best = pri if best is None else min(best, pri)
         return 0.0 if best is None else max(5.0, 24.0 - (best - 1) * 5.0)
+
+    # context layer: the season of life reorders the bar (Context Intelligence).
+    contexts = await active_contexts(user_id, now=now)
+
+    def _context_bump(title: str) -> float:
+        return context_weight(title, contexts) * 25.0  # 0..25, scaled by confidence
 
     raw: list[dict] = []
 
@@ -120,7 +127,7 @@ async def rank_attention(user_id: str, *, now: datetime | None = None, limit: in
         })
 
     for it in raw:
-        it["priority"] = round(min(100.0, it["priority"] + _goal_bump(it["title"])), 1)
+        it["priority"] = round(min(100.0, it["priority"] + _goal_bump(it["title"]) + _context_bump(it["title"])), 1)
         it["tier"] = _tier(it["priority"])
         dl = it["deadline"]
         it["deadline"] = dl.isoformat() if isinstance(dl, datetime) else dl

@@ -2054,6 +2054,48 @@ async def track_interest(args):
 
 
 @tool(
+    "set_focus",
+    (
+        "Record an explicit priority window the user declares — 'for the next two "
+        "weeks fundraising is my priority', 'this semester focus on academics', "
+        "'next month is about the move'. Donna then weighs everything she surfaces, "
+        "watches, and prepares toward that focus until it expires on its own. Use "
+        "when the user states a clear, time-bounded priority. "
+        "WHEN NOT TO USE: a single task or deadline (use track_task); a long-term "
+        "goal (use track_goal); a passing mention with no 'this is my focus' intent."
+    ),
+    {
+        "type": "object",
+        "required": ["focus"],
+        "properties": {
+            "focus": {"type": "string", "description": "The area to prioritize, e.g. 'fundraising', 'exams', 'the move', 'job search'."},
+            "days": {"type": "integer", "description": "How long it stays the priority, in days. Default 14."},
+        },
+    },
+)
+@traceable(name="donna.tool.set_focus", run_type="tool")
+async def set_focus(args):
+    uid = _current_user_id()
+    if not uid:
+        return text_content("focus not set: no user in scope (runtime bug, just reply).")
+    focus = str(args.get("focus") or "").strip()
+    if not focus:
+        return text_content("focus not set: name the priority (e.g. 'fundraising').")
+    try:
+        days = max(1, min(120, int(args.get("days") or 14)))
+    except (TypeError, ValueError):
+        days = 14
+    from backend.knowledge.context import set_focus as _set_focus
+
+    try:
+        await _set_focus(uid, focus, days=days)
+    except Exception:
+        logger.exception("set_focus: write failed")
+        return text_content("focus not set: internal error (non-fatal, just reply).")
+    return text_content(f"got it — i'll weigh things toward {focus} for the next {days} days.")
+
+
+@tool(
     "track_task",
     (
         "Track an administrative to-do or errand the user needs to get done — "
@@ -2200,6 +2242,7 @@ DONNA_TOOLS = (
     schedule,
     track_goal,
     track_interest,
+    set_focus,
     track_task,
     track_flight,
     check_calendar,

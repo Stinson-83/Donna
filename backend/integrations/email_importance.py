@@ -24,6 +24,9 @@ class ScoringContext:
     goal_keywords: Sequence[str] = field(default_factory=list)
     # terms from the user's active goals (knowledge.goals.goal_keywords) — an email
     # that touches a goal is more important (Cap 7: goals drive prioritization)
+    context_keywords: Sequence[str] = field(default_factory=list)
+    # terms from the user's active contexts (knowledge.context.context_keywords) —
+    # an investor email matters more WHILE fundraising (the Context Layer)
 
 
 @dataclass(frozen=True)
@@ -77,6 +80,12 @@ def score_email(
         if kw and kw.lower() in goal_hay:
             score += 0.5
             signals.append("goal_match")
+            break
+
+    for kw in ctx.context_keywords:
+        if kw and kw.lower() in goal_hay:
+            score += 0.4
+            signals.append("context_match")
             break
 
     if msg.thread_id in ctx.recent_sent_thread_ids:

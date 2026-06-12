@@ -655,3 +655,30 @@ class Goal(Base):
     __table_args__ = (
         Index("idx_goals_user_status", "user_id", "status"),
     )
+
+
+class Context(Base):
+    """The dynamic Context Layer (CONTEXT_INTELLIGENCE_ARCHITECTURE.md) — what
+    SEASON of life the user is in right now (traveling, fundraising, exams, ...).
+    Distinct from the stable User Model: probabilistic, time-bounded, decaying.
+    Multiple can be active at once. NOT a mode flag — a belief with a confidence
+    and an evidence trail. Deterministic state that WEIGHTS prioritization, watch
+    cadence, retrieval, and delivery; it never reasons (that's the loop)."""
+    __tablename__ = "contexts"
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=generate_uuid)
+    user_id: Mapped[str] = mapped_column(String, ForeignKey("users.id"), nullable=False)
+    kind: Mapped[str] = mapped_column(String, nullable=False)  # travel | fundraising | exam | health | ... | custom:<slug>
+    confidence: Mapped[float] = mapped_column(Float, nullable=False, default=0.5)  # 0..1
+    state: Mapped[str] = mapped_column(String, nullable=False, default="active")  # active | closed
+    source: Mapped[str] = mapped_column(String, nullable=False, default="inferred")  # inferred | focus_window | confirmed
+    evidence: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)   # what raised it
+    domains: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)    # {amplify:[...], damp:[...]}
+    onset_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, nullable=False)
+    last_signal_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, nullable=False)
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)  # focus windows expire
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, nullable=False)
+
+    __table_args__ = (
+        Index("uq_context_user_kind", "user_id", "kind", unique=True),
+        Index("idx_context_user_state", "user_id", "state"),
+    )
