@@ -72,8 +72,12 @@ The engine around each is real; only the third-party account is stubbed (`backen
 - [ ] Resurface the **Memory** tab (backend live, UI parked) + wire the constellation to `/cognition/graph` and back the "areas" index with a real source
 - [ ] Surface the **Beliefs** tab (built, real-backed via `useRemote`, unmounted)
 
-### F. Specced, not built
-- [ ] The **Context / Adaptive layer** (`docs_v2/CONTEXT_INTELLIGENCE_ARCHITECTURE.md`) — situational weighting across prioritization/watches/retrieval/delivery
+### F. Context / Adaptive layer (`docs_v2/CONTEXT_INTELLIGENCE_ARCHITECTURE.md`) — IN PROGRESS
+- [x] **Slice 1**: the `contexts` store + deterministic engine (infer/decay/focus windows) + `context_weight`; wired into **prioritization** (rank_attention / Watch Bar), **email importance**, the **`## CONTEXT` prompt block**, and the **tick refresh**; `set_focus` tool. (`backend/knowledge/context.py`, `db.models.Context`, migration 0012)
+- [ ] Confirmation cards (ask when high-confidence + high-impact)
+- [ ] Context modifier on watch cadence + the delivery tier (`delivery_policy`)
+- [ ] Context-aware retrieval pointers (Context Assembly)
+- [ ] Dashboard-derived / richer signal inference (recruiter threads, etc.)
 
 ---
 
