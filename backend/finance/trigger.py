@@ -124,7 +124,7 @@ async def maybe_surface_finance(user_id: str) -> None:
             try:
                 from backend.integrations.notify import deliver_proactive
 
-                await deliver_proactive(user_id, outbound)
+                await deliver_proactive(user_id, outbound, tier="critical")  # a bill about to bounce
             except Exception:
                 logger.exception("proactive_finance: push notify failed user=%s", user_id)
     except Exception:

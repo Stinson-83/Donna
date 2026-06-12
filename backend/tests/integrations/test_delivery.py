@@ -95,3 +95,43 @@ async def test_preferred_channel_overrides(db, monkeypatch):
     await _set("app")
     assert await deliver_proactive("u1", out) == "app"
     assert calls == {"push": 1, "wa": 1}
+
+
+def test_delivery_policy_tiers():
+    from backend.integrations.delivery_policy import (
+        is_voice_tier, should_interrupt, tier_for_flight, tier_for_watch,
+    )
+    assert should_interrupt("critical") and should_interrupt("high")
+    assert not should_interrupt("medium") and not should_interrupt("low")
+    assert should_interrupt(None)  # default is high -> interrupts
+    assert tier_for_watch(80) == "high" and tier_for_watch(40) == "medium"
+    assert tier_for_flight("cancelled") == "critical" and tier_for_flight("delayed") == "high"
+    assert is_voice_tier("critical") and not is_voice_tier("high")
+
+
+@pytest.mark.asyncio
+async def test_tier_gates_the_push(db, monkeypatch):
+    from backend.integrations.notify import deliver_proactive
+
+    calls = {"push": 0, "wa": 0}
+
+    async def fake_push(user_id, outbound, title="donna"):
+        calls["push"] += 1
+        return 1
+
+    async def fake_wa(self, phone, messages):
+        calls["wa"] += 1
+        return ["w1"]
+
+    monkeypatch.setattr("backend.integrations.push.notify_outbound", fake_push)
+    monkeypatch.setattr("delivery.whatsapp.WhatsAppChannel.send_many", fake_wa)
+    out = [TextMessage(body="x")]
+
+    # medium/low are held — they never buzz (the card still persists on the dashboard)
+    assert await deliver_proactive("u1", out, tier="medium") == "held"
+    assert await deliver_proactive("u1", out, tier="low") == "held"
+    assert calls == {"push": 0, "wa": 0}
+
+    # critical interrupts (u1 has a real phone, no app -> whatsapp)
+    assert await deliver_proactive("u1", out, tier="critical") == "whatsapp"
+    assert calls == {"push": 0, "wa": 1}

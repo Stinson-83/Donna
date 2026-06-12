@@ -291,7 +291,7 @@ async def maybe_surface_waste(user_id: str, *, now_utc: datetime | None = None) 
             try:
                 from backend.integrations.notify import deliver_proactive
 
-                await deliver_proactive(user_id, outbound)
+                await deliver_proactive(user_id, outbound, tier="medium")  # never urgent — quiet
             except Exception:
                 logger.exception("finance_waste: deliver failed user=%s", user_id[:8])
     except Exception:

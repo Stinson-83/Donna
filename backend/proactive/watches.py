@@ -209,6 +209,7 @@ class WatchOutcome:
     new_state: dict = field(default_factory=dict)
     surface_prompt: str | None = None
     retire: bool = False
+    tier: str | None = None  # delivery tier override; None -> derived from importance
 
 
 async def evaluate_generic(watch) -> WatchOutcome:
@@ -316,7 +317,7 @@ async def _invoke_brain(state: dict, config=None) -> dict:
     return await donna_turn(state, config)
 
 
-async def _surface_watch(watch, prompt: str) -> None:
+async def _surface_watch(watch, prompt: str, *, tier: str = "high") -> None:
     from donna_runtime.config import DonnaAgentConfig
 
     cfg = DonnaAgentConfig(mode="proactive", user_id=watch.user_id)
@@ -327,7 +328,7 @@ async def _surface_watch(watch, prompt: str) -> None:
         try:
             from backend.integrations.notify import deliver_proactive
 
-            await deliver_proactive(watch.user_id, outbound)
+            await deliver_proactive(watch.user_id, outbound, tier=tier)
         except Exception:
             logger.exception("watch surface: push failed user=%s", watch.user_id[:8])
 
@@ -350,7 +351,10 @@ async def sweep_due_watches(now: datetime | None = None) -> int:
 
         if outcome.surface and outcome.surface_prompt:
             try:
-                await _surface_watch(w, outcome.surface_prompt)
+                from backend.integrations.delivery_policy import tier_for_watch
+
+                tier = outcome.tier or tier_for_watch(w.importance)
+                await _surface_watch(w, outcome.surface_prompt, tier=tier)
                 fired += 1
             except Exception:
                 logger.exception("watch surface failed id=%s", w.id)

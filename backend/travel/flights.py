@@ -306,4 +306,9 @@ async def evaluate_flight_watch(watch):
         "Never invent details you did not retrieve."
     )
 
-    return WatchOutcome(surface=True, new_state=new_state, surface_prompt="\n".join(lines), retire=terminal)
+    from backend.integrations.delivery_policy import tier_for_flight
+
+    return WatchOutcome(
+        surface=True, new_state=new_state, surface_prompt="\n".join(lines),
+        retire=terminal, tier=tier_for_flight(cur.status),
+    )

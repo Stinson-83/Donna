@@ -16,10 +16,25 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-async def deliver_proactive(user_id: str, outbound: list, *, title: str = "donna") -> str:
-    """Deliver `outbound` on one surface. Returns 'app' | 'whatsapp' | 'none'."""
+async def deliver_proactive(user_id: str, outbound: list, *, tier: str = "high", title: str = "donna") -> str:
+    """Deliver `outbound` on one surface, gated by priority tier. Returns
+    'app' | 'whatsapp' | 'held' | 'none'.
+
+    critical/high interrupt (push/send); medium/low are HELD — no buzz. A held
+    surface still persists as a card on the dashboard + watch bar; it just doesn't
+    actively interrupt (ambient model: notifications stay rare)."""
     if not outbound:
         return "none"
+
+    from backend.integrations.delivery_policy import is_voice_tier, should_interrupt
+
+    if not should_interrupt(tier):
+        logger.info("deliver_proactive: held quietly (tier=%s) user=%s", tier, user_id[:8])
+        return "held"
+    if is_voice_tier(tier):
+        # critical is voice-eligible; ambient voice is a future surface, so for now
+        # it pushes like high. The hook lives here when voice lands.
+        logger.info("deliver_proactive: voice-eligible (tier=critical) user=%s", user_id[:8])
 
     from sqlalchemy import select
 

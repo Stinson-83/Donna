@@ -116,6 +116,7 @@ async def test_delay_updates_calendar_and_surfaces_consequence(db):
     assert "arrival" in out.surface_prompt
     assert "Pickup" in out.surface_prompt          # downstream consequence caught
     assert "flight_update" in out.surface_prompt
+    assert out.tier == "high"                       # a delay interrupts, but isn't critical
 
     # the linked calendar event was moved to the new arrival
     async with db() as s:
@@ -151,4 +152,19 @@ async def test_landed_retires_the_watch(db):
 
     set_flight_provider(_provider(_status(status="landed")))
     out = await evaluate_flight_watch(await _load_watch(db, wid))
+    assert out.retire is True
+
+
+@pytest.mark.asyncio
+async def test_cancelled_flight_is_critical_tier(db):
+    from backend.travel.flights import evaluate_flight_watch, track_flight
+
+    await _seed_world(db)
+    set_flight_provider(_provider(_status()))
+    wid = await track_flight("u1", "SQ516", "2026-08-25")
+
+    set_flight_provider(_provider(_status(status="cancelled")))
+    out = await evaluate_flight_watch(await _load_watch(db, wid))
+    assert out.surface is True
+    assert out.tier == "critical"   # a cancellation interrupts hard (+ voice when it lands)
     assert out.retire is True
