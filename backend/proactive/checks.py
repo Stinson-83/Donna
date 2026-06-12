@@ -177,6 +177,63 @@ async def maybe_watch_interests(user_id: str) -> None:
             logger.exception("maybe_watch_interests: create_watch failed user=%s topic=%s", user_id[:8], topic)
 
 
+# ── personal ops (Cap 11): admin tasks approaching their deadline ──────────
+
+async def maybe_surface_due_task(user_id: str, *, now_utc: datetime | None = None, lead_days: int = 14) -> None:
+    """Surface the most urgent admin task (open loop with a due_date) coming due —
+    a renewal, an RSVP, a booking — so a deadline never slips. Also covers Cap 10's
+    deadline/expiration risk. One surface per task (deduped); waking hours only."""
+    from zoneinfo import ZoneInfo
+
+    from sqlalchemy import select
+
+    from db.models import User, utcnow
+    from db.session import async_session
+
+    from backend.knowledge.tasks import list_due_tasks
+
+    now = now_utc or utcnow()
+    async with async_session() as s:
+        user = (await s.execute(select(User).where(User.id == user_id))).scalar_one_or_none()
+        if user is None:
+            return
+        tz = ZoneInfo(user.timezone or "Asia/Singapore")
+        if now.replace(tzinfo=timezone.utc).astimezone(tz).hour not in range(7, 23):
+            return  # no 3am nags
+
+        tasks = await list_due_tasks(user_id, now=now, within_days=lead_days)
+        target = None
+        for t in tasks:
+            if not await _pinged_since(s, user_id, f"task_due:{t['id']}", now - timedelta(days=10)):
+                target = t
+                break
+    if target is None:
+        return
+
+    days = (target["due_date"].date() - now.date()).days
+    if days < 0:
+        when = f"{-days} day(s) overdue"
+    elif days == 0:
+        when = "due today"
+    elif days == 1:
+        when = "due tomorrow"
+    else:
+        when = f"due in {days} days"
+
+    await _run_proactive(user_id, (
+        "[SYSTEM TRIGGER: task_due]\n"
+        f"An admin task is {when}: \"{target['content']}\" (category: {target['category'] or 'admin'}).\n"
+        "Remind the user in one short line and help them actually get it done — "
+        "prepare the steps, offer to handle the part you can (book it, draft the "
+        "form, set a reminder), or let them snooze or mark it done. If it's clearly "
+        "handled already or not worth interrupting, stay silent."
+    ))
+
+    from backend.integrations.proactive_rate_limit import record_ping
+
+    await record_ping(user_id, f"task_due:{target['id']}", target["content"], at=now)
+
+
 # ── shared ────────────────────────────────────────────────────────────────
 
 async def _pinged_since(session, user_id: str, source: str, cutoff: datetime) -> bool:

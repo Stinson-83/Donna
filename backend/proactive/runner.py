@@ -35,6 +35,7 @@ def default_checks() -> list[ProactiveCheck]:
     from backend.proactive.checks import (
         maybe_checkin_meal,
         maybe_surface_birthday,
+        maybe_surface_due_task,
         maybe_watch_interests,
     )
     from backend.proactive.prepare import maybe_prepare_upcoming
@@ -42,6 +43,7 @@ def default_checks() -> list[ProactiveCheck]:
     return [
         maybe_surface_finance,
         maybe_prepare_upcoming,
+        maybe_surface_due_task,
         maybe_checkin_meal,
         maybe_surface_birthday,
         maybe_watch_interests,

@@ -2054,6 +2054,64 @@ async def track_interest(args):
 
 
 @tool(
+    "track_task",
+    (
+        "Track an administrative to-do or errand the user needs to get done — "
+        "renew a passport, RSVP to a wedding, book a dentist, submit an "
+        "application, fill a form, renew insurance — optionally with a due date. "
+        "Donna keeps it on the user's plate, reminds them ahead of the deadline, "
+        "and helps them finish it. Use for concrete personal-admin tasks, "
+        "especially anything with a deadline that must not slip. "
+        "WHEN NOT TO USE: a specific-time reminder or calendar event (use "
+        "schedule); a long-term goal or aspiration (use track_goal); an external "
+        "thing to monitor like a flight or a topic (use track_flight / "
+        "track_interest)."
+    ),
+    {
+        "type": "object",
+        "required": ["title"],
+        "properties": {
+            "title": {"type": "string", "description": "The task in the user's terms, e.g. 'renew passport', 'RSVP to Priya's wedding', 'book dentist'."},
+            "due": {"type": "string", "description": "Optional deadline as YYYY-MM-DD."},
+            "category": {"type": "string", "description": "renewal | booking | rsvp | form | application | admin (default)."},
+        },
+    },
+)
+@traceable(name="donna.tool.track_task", run_type="tool")
+async def track_task(args):
+    uid = _current_user_id()
+    if not uid:
+        return text_content("task not tracked: no user in scope (runtime bug, just reply).")
+    title = str(args.get("title") or "").strip()
+    if not title:
+        return text_content("task not tracked: 'title' is required.")
+
+    from datetime import datetime
+
+    due = None
+    raw_due = str(args.get("due") or "").strip()
+    if raw_due:
+        try:
+            d = datetime.fromisoformat(raw_due)
+            due = d.replace(hour=9, minute=0, second=0, microsecond=0) if (d.hour == 0 and d.minute == 0) else d
+        except ValueError:
+            due = None  # unparseable date -> track it without a deadline
+
+    from backend.knowledge.tasks import create_task
+
+    try:
+        await create_task(uid, title, due=due, category=str(args.get("category") or "admin"), source="chat")
+    except Exception:
+        logger.exception("track_task: write failed")
+        return text_content("task not tracked: internal error (non-fatal, just reply).")
+
+    when = f" by {due.strftime('%b %d')}" if due else ""
+    return text_content(
+        f'on it — i\'m tracking "{title}"{when}. i\'ll remind you before it\'s due and help you get it done.'
+    )
+
+
+@tool(
     "track_flight",
     (
         "Start tracking a specific flight so Donna watches its status on her own "
@@ -2142,6 +2200,7 @@ DONNA_TOOLS = (
     schedule,
     track_goal,
     track_interest,
+    track_task,
     track_flight,
     check_calendar,
     image,

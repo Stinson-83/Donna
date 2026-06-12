@@ -151,6 +151,10 @@ class OpenLoop(Base):
     source_message: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
     status: Mapped[str] = mapped_column(String, default="active")
+    # Personal-ops (Cap 11): an open loop with a due_date is a tracked admin task /
+    # errand (renew passport, RSVP, book dentist) that Donna surfaces ahead of time.
+    due_date: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    category: Mapped[str | None] = mapped_column(String, nullable=True)  # renewal | booking | rsvp | form | application | admin
     resolved_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
 
