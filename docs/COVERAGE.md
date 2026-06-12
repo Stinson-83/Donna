@@ -74,8 +74,8 @@ The engine around each is real; only the third-party account is stubbed (`backen
 
 ### F. Context / Adaptive layer (`docs_v2/CONTEXT_INTELLIGENCE_ARCHITECTURE.md`) — IN PROGRESS
 - [x] **Slice 1**: the `contexts` store + deterministic engine (infer/decay/focus windows) + `context_weight`; wired into **prioritization** (rank_attention / Watch Bar), **email importance**, the **`## CONTEXT` prompt block**, and the **tick refresh**; `set_focus` tool. (`backend/knowledge/context.py`, `db.models.Context`, migration 0012)
+- [x] **Slice 2**: context modifier on **watch cadence** (relevant watches check sooner) + the **delivery tier** (focus-relevant surfaces interrupt; off-focus surfaces during a declared focus go quiet; critical unmoved). (`watches.py`, `notify.py`, `delivery_policy.shift_tier`)
 - [ ] Confirmation cards (ask when high-confidence + high-impact)
-- [ ] Context modifier on watch cadence + the delivery tier (`delivery_policy`)
 - [ ] Context-aware retrieval pointers (Context Assembly)
 - [ ] Dashboard-derived / richer signal inference (recruiter threads, etc.)
 
