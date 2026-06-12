@@ -26,7 +26,20 @@ async def deliver_proactive(user_id: str, outbound: list, *, tier: str = "high",
     if not outbound:
         return "none"
 
-    from backend.integrations.delivery_policy import is_voice_tier, should_interrupt
+    from backend.integrations.delivery_policy import is_voice_tier, shift_tier, should_interrupt
+
+    # Context Layer: the season of life nudges the interrupt bar — a surface about an
+    # active context interrupts more readily; an off-focus surface during a declared
+    # focus window goes quieter. Best-effort; never blocks delivery. Critical unmoved.
+    try:
+        from backend.knowledge.context import delivery_tier_shift
+
+        surface_text = " ".join(
+            (getattr(m, "body", "") or getattr(m, "text", "") or "") for m in outbound
+        )
+        tier = shift_tier(tier, await delivery_tier_shift(user_id, surface_text))
+    except Exception:
+        logger.exception("deliver_proactive: context tier shift failed user=%s", user_id[:8])
 
     if not should_interrupt(tier):
         logger.info("deliver_proactive: held quietly (tier=%s) user=%s", tier, user_id[:8])

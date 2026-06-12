@@ -50,3 +50,21 @@ def tier_for_watch(importance: int | None) -> str:
 
 def tier_for_flight(status: str | None) -> str:
     return "critical" if (status or "") in ("cancelled", "diverted") else "high"
+
+
+_TIER_ORDER = ("low", "medium", "high", "critical")
+
+
+def shift_tier(tier: str | None, delta: int) -> str:
+    """Nudge a tier up/down by one notch (Context Layer). Critical never moves (a
+    bill-bounce always interrupts); an up-bump caps at high (context can make a
+    surface interrupt, but never manufactures a critical); a down-bump floors at low."""
+    t = (tier or "high").lower()
+    if t == "critical" or not delta:
+        return t if t in _TIER_ORDER else "high"
+    i = _TIER_ORDER.index(t) if t in _TIER_ORDER else 2
+    if delta > 0:
+        i = min(i + 1, _TIER_ORDER.index("high"))
+    else:
+        i = max(i - 1, 0)
+    return _TIER_ORDER[i]

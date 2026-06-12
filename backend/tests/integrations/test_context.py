@@ -128,3 +128,66 @@ def test_email_context_match_boost():
     with_ctx = score_email(msg, ScoringContext(context_keywords=["series", "term sheet", "investor"]))
     assert "context_match" in with_ctx.signals
     assert with_ctx.score > plain.score
+
+
+# ── it tightens watch cadence ────────────────────────────────────────────────
+
+@pytest.mark.asyncio
+async def test_context_tightens_relevant_watch_cadence(db):
+    from backend.knowledge.context import set_focus
+    from backend.proactive.watches import create_watch
+
+    await set_focus("u1", "fundraising", days=14, now=NOW)
+    rel_id = await create_watch("u1", "reply", "sequoia partner", title="sequoia investor reply", importance=50)
+    off_id = await create_watch("u1", "web", "ramen spots", title="best ramen in town", importance=50)
+
+    async with db() as s:
+        rel = await s.get(Watch, rel_id)
+        off = await s.get(Watch, off_id)
+    assert rel.next_check < off.next_check        # the fundraising watch checks sooner
+    assert rel.importance == off.importance == 50  # stored importance is unchanged (context is transient)
+
+
+# ── it nudges the delivery tier ──────────────────────────────────────────────
+
+def test_shift_tier_pure():
+    from backend.integrations.delivery_policy import shift_tier
+    assert shift_tier("critical", -1) == "critical"   # a bill-bounce never goes quiet
+    assert shift_tier("critical", 1) == "critical"
+    assert shift_tier("medium", 1) == "high"
+    assert shift_tier("high", 1) == "high"             # up-bump caps at high
+    assert shift_tier("high", -1) == "medium"
+    assert shift_tier("low", -1) == "low"              # down-bump floors at low
+
+
+@pytest.mark.asyncio
+async def test_delivery_tier_shift_by_context(db):
+    from backend.knowledge.context import delivery_tier_shift, set_focus
+
+    await set_focus("u1", "fundraising", days=14, now=NOW)
+    assert await delivery_tier_shift("u1", "sequoia term sheet is ready", now=NOW) == 1
+    assert await delivery_tier_shift("u1", "your spotify renews tomorrow", now=NOW) == -1
+
+
+@pytest.mark.asyncio
+async def test_context_shifts_real_delivery(db, monkeypatch):
+    from delivery.messages import TextMessage
+
+    from backend.integrations.notify import deliver_proactive
+    from backend.knowledge.context import set_focus
+
+    calls = {"wa": 0}
+
+    async def fake_wa(self, phone, messages):
+        calls["wa"] += 1
+        return ["w"]
+
+    monkeypatch.setattr("delivery.whatsapp.WhatsAppChannel.send_many", fake_wa)
+    await set_focus("u1", "fundraising", days=14, now=NOW)  # u1 has phone "+1", no app
+
+    # a medium surface ABOUT the focus -> bumped to high -> interrupts
+    assert await deliver_proactive("u1", [TextMessage(body="sequoia replied on the term sheet")], tier="medium") == "whatsapp"
+    assert calls["wa"] == 1
+    # an off-focus medium surface during the focus window -> bumped to low -> held
+    assert await deliver_proactive("u1", [TextMessage(body="your spotify subscription renews tomorrow")], tier="medium") == "held"
+    assert calls["wa"] == 1  # no extra send

@@ -89,6 +89,20 @@ async def _apply_goal_boost(user_id: str, text: str, importance: int) -> int:
         return importance
 
 
+async def _context_cadence_boost(user_id: str, text: str) -> int:
+    """Context Layer — a watch whose subject matches an active context checks more
+    often (off-context ones back off). Boosts ONLY the effective importance fed to
+    compute_next_check (transient, recomputed each rearm as context shifts), never
+    the stored importance. Scaled (x35) so a confident context pushes a relevant
+    watch over the importance threshold that tightens cadence."""
+    try:
+        from backend.knowledge.context import active_contexts, context_weight
+
+        return int(round(context_weight(text, await active_contexts(user_id)) * 35))
+    except Exception:
+        return 0
+
+
 async def create_watch(
     user_id: str,
     watch_type: str,
@@ -107,6 +121,8 @@ async def create_watch(
     watch_type = (watch_type or "generic").strip().lower()
     subject_key = (subject_key or title or "").strip()
     importance = await _apply_goal_boost(user_id, f"{title} {subject_key}", importance)
+    # effective importance for cadence only (context is transient — never stored)
+    cadence_imp = min(100, importance + await _context_cadence_boost(user_id, f"{title} {subject_key}"))
     async with async_session() as s:
         existing = (await s.execute(
             select(Watch).where(
@@ -122,14 +138,14 @@ async def create_watch(
             if deadline is not None:
                 existing.deadline = deadline
             existing.next_check = compute_next_check(
-                now=utcnow(), deadline=existing.deadline, importance=importance
+                now=utcnow(), deadline=existing.deadline, importance=cadence_imp
             )
             await s.commit()
             return existing.id
         w = Watch(
             user_id=user_id, watch_type=watch_type, subject_key=subject_key,
             title=title or subject_key, importance=importance, deadline=deadline,
-            next_check=compute_next_check(now=utcnow(), deadline=deadline, importance=importance),
+            next_check=compute_next_check(now=utcnow(), deadline=deadline, importance=cadence_imp),
         )
         s.add(w)
         await s.commit()
@@ -164,8 +180,9 @@ async def rearm_watch(watch, *, changed: bool, new_state: dict) -> None:
             w.last_known_state = new_state or {}
         else:
             w.stable_checks = int(w.stable_checks or 0) + 1
+        cadence_imp = min(100, int(w.importance) + await _context_cadence_boost(w.user_id, f"{w.title} {w.subject_key}"))
         w.next_check = compute_next_check(
-            now=utcnow(), deadline=w.deadline, importance=w.importance,
+            now=utcnow(), deadline=w.deadline, importance=cadence_imp,
             stable_checks=w.stable_checks, recent_change=changed,
         )
         await s.commit()

@@ -251,6 +251,23 @@ def context_weight(text: str, contexts: list) -> float:
     return best
 
 
+async def delivery_tier_shift(user_id: str, text: str, *, now: datetime | None = None) -> int:
+    """How the active context should nudge a proactive surface's delivery tier:
+    +1 raise (the surface matches a confident active context — interrupt more readily),
+    -1 lower (off-focus while an explicit focus window is active — stay quieter),
+    0 none. Critical is never lowered (that's enforced by delivery_policy.shift_tier)."""
+    ctxs = await active_contexts(user_id, now=now)
+    if not ctxs:
+        return 0
+    w = context_weight(text, ctxs)
+    if w >= 0.7:
+        return 1
+    has_focus = any(c.source == "focus_window" and float(c.confidence or 0) >= 0.7 for c in ctxs)
+    if has_focus and w < 0.3:
+        return -1
+    return 0
+
+
 async def context_keywords(user_id: str, *, now: datetime | None = None) -> list[str]:
     """Flat amplify-keyword set across reasonably-confident contexts — for the
     email importance scorer (parallel to goal_keywords)."""
