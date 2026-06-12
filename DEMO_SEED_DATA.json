@@ -1,0 +1,205 @@
+{
+  "_meta": {
+    "description": "Demo seed for Donna — the fictional, fully-trained user 'Mira Sharma' (day 247). Loading this populates the User Model, memories, watches, goals, commitments, and the dashboard so the DEMO_SCRIPT.md day plays against real state. Source of truth for the data design: DEMO_DATASET.md.",
+    "demo_day": "2026-04-18",
+    "now": "2026-04-18T07:30:00+08:00",
+    "timezone": "Asia/Singapore",
+    "currency": "INR",
+    "day_offsets": { "tomorrow_fri": "2026-04-19", "saturday": "2026-04-20", "monday_plus4": "2026-04-22" },
+    "notes": [
+      "All people, the company 'Marble', and the fund partner are fictional/illustrative.",
+      "Timestamps are local Singapore time (+08:00); a loader should store naive UTC per the models.",
+      "ids are readable slugs for a re-runnable seed; a loader may map them to UUIDs.",
+      "Cards for moments M2-M8 are NOT pre-seeded — they render live during the demo; dashboard.done is what they become at M9 (empty at seed time).",
+      "Weekday labels are demo overlays; the load-critical invariants are the relative offsets (tomorrow=+1, saturday=+2, AWS/RSVP=+4)."
+    ]
+  },
+
+  "user": {
+    "id": "mira",
+    "name": "Mira Sharma",
+    "phone": "+6580000000",
+    "timezone": "Asia/Singapore",
+    "notify_channel": "auto",
+    "onboarding_complete": true,
+    "onboarded_at": "2025-08-15T09:00:00+08:00",
+    "living_profile": {
+      "biography": {
+        "summary": "founder & ceo of marble (developer-infrastructure). based in singapore (holland village), from bengaluru. mid series-a raise (sequoia leading), mid-relocation. banks in india (hdfc).",
+        "relationships": [
+          { "name": "Aniroodh Sharma", "relation": "brother", "importance": 90, "frequency": "weekly", "email": "aniroodh@example.com", "notes": "family foodie; sends restaurant recs; texted about lotus thai" },
+          { "name": "Ishaan", "relation": "partner", "importance": 92, "frequency": "daily", "email": "ishaan@example.com", "notes": "the saturday lotus thai plan is with him" },
+          { "name": "Priya Menon", "relation": "cofounder / cto", "importance": 95, "frequency": "daily", "email": "priya@marble.dev", "notes": "owed the q3 deck; you defer to her on pricing" },
+          { "name": "Ravi Iyer", "relation": "head-of-eng candidate", "importance": 70, "frequency": "weekly", "email": "ravi@example.com", "notes": "offer out; 9:30 negotiation call" },
+          { "name": "Pavithra", "relation": "landlord (new flat)", "importance": 60, "frequency": "weekly", "email": "pavithra@example.com", "notes": "awaiting her reply on the room" },
+          { "name": "Kartik Shah", "relation": "advisor", "importance": 65, "frequency": "monthly", "email": "kartik@example.com", "notes": "4pm, rescheduled from yesterday" },
+          { "name": "Anjali Sharma", "relation": "mother", "importance": 96, "frequency": "weekly", "email": "anjali@example.com", "birthday": "04-20", "notes": "prefers lilies; you call her around noon on her birthday" },
+          { "name": "Avu", "relation": "close friend", "importance": 55, "frequency": "rare", "notes": "wedding; rsvp due monday" },
+          { "name": "Aanya Rao", "relation": "investor (sequoia partner)", "importance": 80, "frequency": "weekly", "email": "aanya@sequoia.example.com", "notes": "leading the round; term sheet out, awaiting your answer" }
+        ],
+        "interests": ["tokyo travel", "thai food", "fundraising"]
+      },
+      "preferences": {
+        "comms": "blunt over polite, lowercase, 'heads up' openers, no em dashes",
+        "music": "apple music",
+        "airport_ride": "grab standard",
+        "mom_flowers": "lilies",
+        "card_note_voice": "love, mira"
+      }
+    }
+  },
+
+  "goals": [
+    { "id": "g_raise", "user_id": "mira", "title": "close the series a", "description": "sequoia leading; lightfield follow soft-circled", "category": "financial", "priority": 1, "status": "active", "confidence": 0.9, "source": "chat" },
+    { "id": "g_health", "user_id": "mira", "title": "stay under ~1900 cal/day, drop 4kg before the move", "category": "health", "priority": 2, "status": "active", "confidence": 0.8, "source": "chat" },
+    { "id": "g_flat", "user_id": "mira", "title": "get the new flat sorted", "category": "personal", "priority": 3, "status": "active", "confidence": 0.7, "source": "inferred" }
+  ],
+
+  "contexts": [
+    {
+      "id": "ctx_fundraising",
+      "user_id": "mira",
+      "kind": "fundraising",
+      "confidence": 0.9,
+      "state": "active",
+      "source": "focus_window",
+      "evidence": { "declared": "fundraising is my priority for the next two weeks" },
+      "domains": { "amplify": ["investor", "investors", "fundraise", "raise", "round", "seed", "series", "term sheet", "valuation", "diligence", "pitch", "data room", "sequoia"], "damp": [] },
+      "onset_at": "2026-04-12T09:00:00+08:00",
+      "last_signal_at": "2026-04-18T07:00:00+08:00",
+      "expires_at": "2026-04-28T09:00:00+08:00"
+    }
+  ],
+
+  "investors": [
+    { "fund": "Sequoia", "partner": "Aanya Rao", "stage": "term sheet", "state": "replied tue; awaiting mira's answer; expires fri noon", "thread_id": "th_sequoia" },
+    { "fund": "Lightfield Capital", "partner": "Theo Vance", "stage": "follow", "state": "soft-circled; in-person friday in KL" },
+    { "fund": "Tasman Ventures", "partner": "Marisol Kee", "stage": "follow", "state": "slow, leaning pass" }
+  ],
+
+  "memories": [
+    { "id": "mem_lotus", "user_id": "mira", "type": "episodic", "source": "whatsapp", "content": "aniroodh texted: 'the pad see ew, mira. you have to.' -> lotus thai, holland village", "entities": ["aniroodh", "lotus thai"], "created_at": "2026-04-14T20:12:00+08:00" },
+    { "id": "mem_saturday", "user_id": "mira", "type": "episodic", "source": "donna_app", "content": "mira said she'd take ishaan to lotus thai on saturday", "entities": ["ishaan", "lotus thai"], "created_at": "2026-04-13T21:40:00+08:00" },
+    { "id": "mem_sequoia_thread", "user_id": "mira", "type": "episodic", "source": "gmail", "content": "sequoia term-sheet thread — final terms attached, awaiting mira's answer; expires fri noon", "entities": ["sequoia", "aanya rao"], "created_at": "2026-04-16T18:05:00+08:00" },
+    { "id": "mem_mom_lilies", "user_id": "mira", "type": "fact", "source": "chat", "content": "mom's favourite flowers are lilies", "entities": ["mom"], "created_at": "2025-12-02T12:00:00+08:00" },
+    { "id": "mem_grab_usual", "user_id": "mira", "type": "fact", "source": "inferred", "content": "mira books grab standard for airport runs", "entities": ["grab"], "created_at": "2026-02-10T05:30:00+08:00" }
+  ],
+
+  "beliefs": [
+    { "id": "b_mom_noon", "user_id": "mira", "subject": "mom", "statement": "you call mom around noon on her birthday", "confidence": 0.9, "evidence": ["past birthdays in chat + calendar"] },
+    { "id": "b_grab", "user_id": "mira", "subject": "rides", "statement": "grab standard is your usual airport ride", "confidence": 0.81, "evidence": ["prior airport bookings"] },
+    { "id": "b_outreach", "user_id": "mira", "subject": "outreach", "statement": "you avoid outreach when the story feels weak", "confidence": 0.84, "evidence": ["delayed investor intros"] },
+    { "id": "b_applemusic", "user_id": "mira", "subject": "music", "statement": "you prefer apple music", "confidence": 0.4, "evidence": ["apple music daily vs spotify low-use"], "note": "weak prior; strengthened to a real belief during M8" }
+  ],
+
+  "observations": [
+    { "id": "obs_mon", "user_id": "mira", "type": "meal", "content": "thali + dessert", "calories": 2150, "note": "over the ~1900 goal by 250", "created_at": "2026-04-15T13:30:00+08:00" },
+    { "id": "obs_tue", "user_id": "mira", "type": "meal", "content": "pizza night", "calories": 2300, "note": "over by 400", "created_at": "2026-04-16T20:10:00+08:00" },
+    { "id": "obs_wed", "user_id": "mira", "type": "meal", "content": "burgers", "calories": 2050, "note": "over by 150", "created_at": "2026-04-17T13:15:00+08:00" },
+    { "id": "obs_today_bf", "user_id": "mira", "type": "meal", "content": "dosa + filter coffee", "calories": 640, "created_at": "2026-04-18T08:05:00+08:00" },
+    { "id": "obs_today_snack", "user_id": "mira", "type": "meal", "content": "samosa + chai", "calories": 580, "created_at": "2026-04-18T11:20:00+08:00" }
+  ],
+
+  "commitments": [
+    { "id": "c_sequoia_answer", "user_id": "mira", "content": "answer sequoia on the term sheet", "status": "active", "category": "decision", "due_date": "2026-04-18T23:59:00+08:00" },
+    { "id": "c_deck", "user_id": "mira", "content": "send priya the q3 deck", "status": "active", "category": "work", "due_date": "2026-04-18T18:00:00+08:00" },
+    { "id": "c_pavithra", "user_id": "mira", "content": "reply to pavithra on the room", "status": "active", "category": "admin" },
+    { "id": "c_rsvp", "user_id": "mira", "content": "rsvp to avu's wedding", "status": "active", "category": "rsvp", "due_date": "2026-04-22T23:59:00+08:00" },
+    { "id": "c_callmom", "user_id": "mira", "content": "call mom (postponed 4 days)", "status": "active", "category": "relationship" },
+    { "id": "c_gym", "user_id": "mira", "content": "gym tonight — 3rd skip this week looming", "status": "active", "category": "health", "due_date": "2026-04-18T19:30:00+08:00" }
+  ],
+
+  "watches": [
+    { "id": "w_sequoia", "user_id": "mira", "watch_type": "reply", "subject_key": "sequoia", "title": "sequoia partner reply", "status": "active", "importance": 90, "deadline": "2026-04-19T12:00:00+08:00", "next_check": "2026-04-18T08:30:00+08:00", "last_checked_at": "2026-04-18T07:00:00+08:00", "last_known_state": {}, "created_at": "2026-04-16T10:00:00+08:00" },
+    { "id": "w_tokyo", "user_id": "mira", "watch_type": "web", "subject_key": "tokyo flights below 38000", "title": "tokyo flights below ₹38k", "status": "active", "importance": 55, "deadline": null, "next_check": "2026-04-18T13:30:00+08:00", "last_known_state": { "seen_urls": ["https://example.com/sin-nrt-1", "https://example.com/sin-nrt-2"] }, "created_at": "2026-03-30T09:00:00+08:00" },
+    { "id": "w_pavithra", "user_id": "mira", "watch_type": "reply", "subject_key": "pavithra", "title": "pavithra response on the room", "status": "active", "importance": 60, "deadline": null, "next_check": "2026-04-18T12:00:00+08:00", "last_known_state": {}, "created_at": "2026-04-15T17:00:00+08:00" },
+    { "id": "w_priya_deck", "user_id": "mira", "watch_type": "reply", "subject_key": "priya deck", "title": "q3 deck feedback from priya", "status": "active", "importance": 65, "deadline": null, "next_check": "2026-04-18T15:00:00+08:00", "last_known_state": {}, "created_at": "2026-04-17T19:00:00+08:00" }
+  ],
+
+  "calendar_events": [
+    { "id": "cal_ravi", "user_id": "mira", "title": "call with ravi — offer negotiation", "start_time": "2026-04-18T09:30:00+08:00", "end_time": "2026-04-18T10:00:00+08:00", "location": null, "google_event_id": "g_ravi" },
+    { "id": "cal_dentist", "user_id": "mira", "title": "dentist", "start_time": "2026-04-18T11:00:00+08:00", "end_time": "2026-04-18T11:45:00+08:00", "location": "Holland Village", "google_event_id": "g_dentist" },
+    { "id": "cal_priya", "user_id": "mira", "title": "priya 1:1 — you owe her the deck", "start_time": "2026-04-18T14:00:00+08:00", "end_time": "2026-04-18T14:45:00+08:00", "location": null, "google_event_id": "g_priya" },
+    { "id": "cal_kartik", "user_id": "mira", "title": "kartik (advisor) — rescheduled", "start_time": "2026-04-18T16:00:00+08:00", "end_time": "2026-04-18T16:30:00+08:00", "location": null, "google_event_id": "g_kartik" },
+    { "id": "cal_gym", "user_id": "mira", "title": "gym", "start_time": "2026-04-18T19:30:00+08:00", "end_time": "2026-04-18T20:30:00+08:00", "location": null, "google_event_id": "g_gym" },
+    { "id": "cal_mom", "user_id": "mira", "title": "call mom (postponed 4 days)", "start_time": "2026-04-18T22:00:00+08:00", "end_time": "2026-04-18T22:30:00+08:00", "location": null, "google_event_id": "g_callmom" },
+    { "id": "cal_flight", "user_id": "mira", "title": "SQ112 flight SIN -> KUL (Changi T1) — lightfield in KL", "start_time": "2026-04-19T07:10:00+08:00", "end_time": "2026-04-19T08:15:00+08:00", "location": "Changi Airport T1", "google_event_id": "g_flight" },
+    { "id": "cal_mom_bday", "user_id": "mira", "title": "Mom's birthday", "start_time": "2026-04-20T00:00:00+08:00", "end_time": "2026-04-20T23:59:00+08:00", "location": null, "google_event_id": "g_mom_bday" }
+  ],
+
+  "emails": [
+    { "id": "e_sequoia", "user_id": "mira", "gmail_message_id": "m_sequoia", "thread_id": "th_sequoia", "from_address": "aanya@sequoia.example.com", "from_name": "Aanya Rao", "subject": "Re: Marble — term sheet (final)", "snippet": "great talking. here are the final terms. we'd want your answer by EOD; the sheet expires tomorrow at noon.", "labels": ["INBOX", "IMPORTANT"], "is_important": true, "is_starred": false, "is_sent": false, "internal_date": "2026-04-16T18:00:00+08:00", "_importance_signals": ["important_label", "biography_relationship", "goal_match", "context_match"] },
+    { "id": "e_priya", "user_id": "mira", "gmail_message_id": "m_priya", "thread_id": "th_priya", "from_address": "priya@marble.dev", "from_name": "Priya Menon", "subject": "q3 deck — your pass?", "snippet": "left comments on slides 4-9. need your pass before the 2pm.", "labels": ["INBOX"], "is_important": false, "is_starred": false, "is_sent": false, "internal_date": "2026-04-17T19:30:00+08:00" },
+    { "id": "e_pavithra", "user_id": "mira", "gmail_message_id": "m_pavithra", "thread_id": "th_pavithra", "from_address": "pavithra@example.com", "from_name": "Pavithra", "subject": "the room — a few questions", "snippet": "can you confirm the move-in date and the deposit?", "labels": ["INBOX"], "is_important": false, "is_starred": false, "is_sent": false, "internal_date": "2026-04-15T16:30:00+08:00" },
+    { "id": "e_lightfield", "user_id": "mira", "gmail_message_id": "m_lightfield", "thread_id": "th_lightfield", "from_address": "theo@lightfield.example.com", "from_name": "Theo Vance", "subject": "Friday in KL — confirming 11am", "snippet": "see you friday 11am. excited to dig into the numbers.", "labels": ["INBOX"], "is_important": false, "is_starred": false, "is_sent": false, "internal_date": "2026-04-16T11:00:00+08:00" },
+    { "id": "e_aws", "user_id": "mira", "gmail_message_id": "m_aws", "thread_id": "th_aws", "from_address": "no-reply@aws.amazon.example.com", "from_name": "AWS Billing", "subject": "Your upcoming charges", "snippet": "your estimated charges this cycle are INR 47,200, auto-debiting on Apr 22.", "labels": ["INBOX"], "is_important": false, "is_starred": false, "is_sent": false, "internal_date": "2026-04-15T06:00:00+08:00" },
+    { "id": "e_newsletter", "user_id": "mira", "gmail_message_id": "m_news", "thread_id": "th_news", "from_address": "digest@somesaas.example.com", "from_name": "SaaS Weekly", "subject": "10 ways to scale your infra", "snippet": "this week in infra...", "labels": ["INBOX", "CATEGORY_PROMOTIONS"], "is_important": false, "is_starred": false, "is_sent": false, "internal_date": "2026-04-18T05:30:00+08:00", "_note": "low importance — proves selective ranking (NOT surfaced)" },
+    { "id": "e_recruiter", "user_id": "mira", "gmail_message_id": "m_recruiter", "thread_id": "th_recruiter", "from_address": "talent@bigco.example.com", "from_name": "A Recruiter", "subject": "Senior role at BigCo", "snippet": "your profile is a strong match...", "labels": ["INBOX"], "is_important": false, "is_starred": false, "is_sent": false, "internal_date": "2026-04-18T06:10:00+08:00", "_note": "medium — NOT surfaced over the sequoia thread" }
+  ],
+
+  "finance": {
+    "accounts": [
+      { "id": "acct_current", "user_id": "mira", "account_type": "current", "institution": "HDFC", "masked_number": "••4471", "currency": "INR", "balance": 43000, "balance_synced_at": "2026-04-18T07:00:00+08:00" },
+      { "id": "acct_savings", "user_id": "mira", "account_type": "savings", "institution": "HDFC", "masked_number": "••9920", "currency": "INR", "balance": 120000, "balance_synced_at": "2026-04-18T07:00:00+08:00" }
+    ],
+    "bills": [
+      { "id": "bill_aws", "user_id": "mira", "account_id": "acct_current", "biller": "AWS", "amount": 47200, "currency": "INR", "due_date": "2026-04-22T03:00:00+08:00", "auto_pay": true, "status": "upcoming" },
+      { "id": "bill_electric", "user_id": "mira", "account_id": "acct_current", "biller": "SP Group (electric)", "amount": 1940, "currency": "INR", "due_date": "2026-04-19T03:00:00+08:00", "auto_pay": true, "status": "upcoming" }
+    ],
+    "transactions": [
+      { "id": "txn_spot_1", "user_id": "mira", "account_id": "acct_current", "amount": 229, "currency": "INR", "direction": "debit", "merchant": "Spotify", "category": "subscription", "occurred_at": "2026-03-19T09:00:00+08:00" },
+      { "id": "txn_spot_2", "user_id": "mira", "account_id": "acct_current", "amount": 229, "currency": "INR", "direction": "debit", "merchant": "Spotify", "category": "subscription", "occurred_at": "2026-02-19T09:00:00+08:00" },
+      { "id": "txn_spot_3", "user_id": "mira", "account_id": "acct_current", "amount": 229, "currency": "INR", "direction": "debit", "merchant": "Spotify", "category": "subscription", "occurred_at": "2026-01-19T09:00:00+08:00" },
+      { "id": "txn_apple_1", "user_id": "mira", "account_id": "acct_current", "amount": 99, "currency": "INR", "direction": "debit", "merchant": "Apple Music", "category": "subscription", "occurred_at": "2026-03-19T09:00:00+08:00" },
+      { "id": "txn_apple_2", "user_id": "mira", "account_id": "acct_current", "amount": 99, "currency": "INR", "direction": "debit", "merchant": "Apple Music", "category": "subscription", "occurred_at": "2026-02-19T09:00:00+08:00" },
+      { "id": "txn_apple_3", "user_id": "mira", "account_id": "acct_current", "amount": 99, "currency": "INR", "direction": "debit", "merchant": "Apple Music", "category": "subscription", "occurred_at": "2026-01-19T09:00:00+08:00" },
+      { "id": "txn_notion", "user_id": "mira", "account_id": "acct_current", "amount": 800, "currency": "INR", "direction": "debit", "merchant": "Notion", "category": "subscription", "occurred_at": "2026-03-24T09:00:00+08:00" },
+      { "id": "txn_figma", "user_id": "mira", "account_id": "acct_current", "amount": 1200, "currency": "INR", "direction": "debit", "merchant": "Figma", "category": "subscription", "occurred_at": "2026-04-01T09:00:00+08:00" },
+      { "id": "txn_coffee", "user_id": "mira", "account_id": "acct_current", "amount": 38, "currency": "INR", "direction": "debit", "merchant": "Common Man Coffee", "category": "food", "occurred_at": "2026-04-17T10:30:00+08:00" }
+    ]
+  },
+
+  "subscriptions": [
+    { "id": "sub_spotify", "service": "Spotify", "amount": 229, "currency": "INR", "renews_at": "2026-04-19T09:00:00+08:00", "uses_this_month": 2, "redundant_with": "Apple Music" },
+    { "id": "sub_apple", "service": "Apple Music", "amount": 99, "currency": "INR", "renews_at": "2026-05-19T09:00:00+08:00", "uses_this_month": 26, "primary": true },
+    { "id": "sub_notion", "service": "Notion", "amount": 800, "currency": "INR", "renews_at": "2026-04-24T09:00:00+08:00", "uses_this_month": 40 },
+    { "id": "sub_figma", "service": "Figma", "amount": 1200, "currency": "INR", "renews_at": "2026-05-01T09:00:00+08:00", "uses_this_month": 22 },
+    { "id": "sub_icloud", "service": "iCloud+ 200GB", "amount": 219, "currency": "INR", "renews_at": "2026-04-09T09:00:00+08:00", "uses_this_month": 30 },
+    { "id": "sub_googleone", "service": "Google One 200GB", "amount": 210, "currency": "INR", "renews_at": "2026-04-12T09:00:00+08:00", "uses_this_month": 0, "note": "duplicate-storage waste held in reserve" }
+  ],
+
+  "dashboard": {
+    "date_label": "thursday, april 18",
+    "holding": 23,
+    "watch_bar": [
+      { "kind": "watch", "ref_id": "w_sequoia", "title": "sequoia partner reply", "note": "waiting since tue", "priority": 95.0, "tier": "critical" },
+      { "kind": "bill", "ref_id": "bill_aws", "title": "aws · ₹4,200 short", "note": "auto-pay in 4 days", "priority": 90.0, "tier": "high" },
+      { "kind": "task", "ref_id": "c_deck", "title": "q3 deck for priya", "note": "due today", "priority": 72.0, "tier": "high" },
+      { "kind": "watch", "ref_id": "w_tokyo", "title": "tokyo flights below ₹38k", "note": "web", "priority": 58.0, "tier": "medium" },
+      { "kind": "logistics", "ref_id": "cal_mom_bday", "title": "mom's birthday", "note": "saturday", "priority": 55.0, "tier": "medium" }
+    ],
+    "watching": [
+      { "watch_id": "w_sequoia", "title": "sequoia partner reply", "type": "reply" },
+      { "watch_id": "w_pavithra", "title": "pavithra response on the room", "type": "reply" },
+      { "watch_id": "w_tokyo", "title": "tokyo flights below ₹38k", "type": "web" },
+      { "watch_id": "w_priya_deck", "title": "q3 deck feedback from priya", "type": "reply" }
+    ],
+    "scheduled": [
+      { "time": "9:30am", "title": "call with ravi (offer negotiation)" },
+      { "time": "11:00am", "title": "dentist · holland village" },
+      { "time": "2:00pm", "title": "priya 1:1 · you owe her the deck" },
+      { "time": "4:00pm", "title": "kartik (rescheduled from yesterday)" },
+      { "time": "7:30pm", "title": "gym · 3rd skip this week" },
+      { "time": "10:00pm", "title": "call mom (you've been postponing 4 days)" }
+    ],
+    "logistics": [
+      { "item": "electric bill · auto-pay tomorrow · balance ok", "ref_id": "bill_electric" },
+      { "item": "aws bill · auto-pay in 4 days · balance ₹4,200 short", "ref_id": "bill_aws" },
+      { "item": "mom's birthday · saturday", "ref_id": "cal_mom_bday" },
+      { "item": "avu's wedding rsvp · deadline monday", "ref_id": "c_rsvp" },
+      { "item": "spotify renews tomorrow · ₹229 · used 2x this month", "ref_id": "sub_spotify" }
+    ],
+    "done": [],
+    "lifetime": { "days_with_donna": 247, "things_caught": 1847, "delivered_on_time_pct": 94 }
+  }
+}
