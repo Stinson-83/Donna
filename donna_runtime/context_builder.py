@@ -443,6 +443,22 @@ async def render_turn_context(state: dict[str, Any]) -> str:
     if today:
         lines.extend(["", today])
 
+    # [RELEVANT NOW] — context-tied pointers (Context Assembly, Trigger tier):
+    # cheap title/ref pointers to what belongs to the current season, so the loop
+    # knows what exists and which way to lean recall_*. Retrieval only, no llm.
+    if user_id:
+        try:
+            from backend.knowledge.context import render_context_pointers
+
+            pointers_now = _resolve_injected_now(
+                state.get("_injected_now"), state.get("_user_timezone")
+            )
+            pointers = (await render_context_pointers(user_id, now=pointers_now)).strip()
+            if pointers:
+                lines.extend(["", pointers])
+        except Exception:
+            logger.exception("render_turn_context: context pointers failed")
+
     # [INTEGRATIONS] — connection state for external providers (Composio).
     if user_id:
         try:

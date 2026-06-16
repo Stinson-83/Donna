@@ -40,6 +40,7 @@ def default_checks() -> list[ProactiveCheck]:
         maybe_watch_interests,
     )
     from backend.knowledge.context import maybe_refresh_contexts
+    from backend.proactive.context_confirm import maybe_confirm_context
     from backend.proactive.morning_brief import maybe_send_morning_brief
     from backend.proactive.prepare import maybe_prepare_upcoming
     from backend.proactive.schedule_health import maybe_surface_schedule_issue
@@ -48,6 +49,9 @@ def default_checks() -> list[ProactiveCheck]:
         # Pure state pass first: recompute the Context Layer so every check + the
         # dashboard below reads a fresh "season of life". Never surfaces.
         maybe_refresh_contexts,
+        # Then, on the fresh state, ask to confirm a season that just turned
+        # high-confidence (§8) — at most once per season, deduped.
+        maybe_confirm_context,
         maybe_send_morning_brief,
         maybe_surface_finance,
         maybe_surface_waste,

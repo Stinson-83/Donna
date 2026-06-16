@@ -3,7 +3,7 @@
 A living checklist of what Donna can do today vs. the full scope in **`Donna_Responsibilities.md`** (the "what a world-class chief of staff handles" spec). Update this as features land.
 
 **Legend:** ✅ built & tested · 🟡 partial / works via general primitives, no dedicated feature · ❌ missing
-**Last updated:** 2026-06-12 · against `main`
+**Last updated:** 2026-06-16 · against `main`
 
 **The architectural test** (from the responsibilities doc): *"Is this something a world-class chief of staff would reasonably handle?"* Most 🟡 rows are deliberate — a study deadline and a visa renewal are both just *a task with a due date*; an investor reply and a flight are both just *a watch*. The general engine covers the examples without a bespoke feature per vertical. The real gaps are **channels**, **real-world rails**, and a handful of **specific behaviors**.
 
@@ -75,9 +75,9 @@ The engine around each is real; only the third-party account is stubbed (`backen
 ### F. Context / Adaptive layer (`docs_v2/CONTEXT_INTELLIGENCE_ARCHITECTURE.md`) — IN PROGRESS
 - [x] **Slice 1**: the `contexts` store + deterministic engine (infer/decay/focus windows) + `context_weight`; wired into **prioritization** (rank_attention / Watch Bar), **email importance**, the **`## CONTEXT` prompt block**, and the **tick refresh**; `set_focus` tool. (`backend/knowledge/context.py`, `db.models.Context`, migration 0012)
 - [x] **Slice 2**: context modifier on **watch cadence** (relevant watches check sooner) + the **delivery tier** (focus-relevant surfaces interrupt; off-focus surfaces during a declared focus go quiet; critical unmoved). (`watches.py`, `notify.py`, `delivery_policy.shift_tier`)
-- [ ] Confirmation cards (ask when high-confidence + high-impact)
-- [ ] Context-aware retrieval pointers (Context Assembly)
-- [ ] Dashboard-derived / richer signal inference (recruiter threads, etc.)
+- [x] **Slice 3**: **confirmation cards** — when an inferred *significant* season (travel / fundraising / exam / job-search / launch / wedding) crosses the confidence threshold, a deterministic tick check asks once via the loop; a tap pins (`source=confirmed`) or damps (declined + sticky) the season with no second LLM call. Confirmed seasons decay+close when their signal lapses; silence leaves the inferred weighting in place. (`context.confirmable_context`/`confirm_context_kind`/`decline_context_kind`, `proactive/context_confirm.py`, `cards/executors.confirm_context`/`decline_context`)
+- [x] **Slice 3b**: **context-aware retrieval pointers** — Context Assembly attaches a `## RELEVANT NOW` block to the per-turn (Trigger-tier) context: for the top active seasons, cheap title/ref pointers to the watches she's running, open commitments, and upcoming events that match the season's domain. Pointers, never a brief (ADR §5); zero LLM; the loop still does deep recall via `recall_*`. (`context.context_pointers`/`render_context_pointers`, wired in `donna_runtime/context_builder.render_turn_context`)
+- [x] **Slice 3c**: **richer signal inference** — `_infer` now aggregates across all the signals the system already produces (upcoming calendar generalized to every season, active watches, goals, and recent inbound **email/thread density** — the "≥N recruiter threads ⇒ job_search" rule), each emitting a per-season prior combined via **noisy-or** (corroborating signals can cross the confirm bar; a lone weak one only nudges), capped below a user confirmation. (`backend/knowledge/context._infer`)
 
 ---
 

@@ -205,6 +205,30 @@ async def order_flowers(user_id: str, args: dict) -> tuple[list, bool]:
     ))], False)
 
 
+async def confirm_context(user_id: str, args: dict) -> tuple[list, bool]:
+    """The user tapped 'yes' on a context confirmation card (§8). Pin the season so
+    it weights strongly and stops re-asking — deterministic, no second LLM call.
+    args: {kind}. L2 (purely internal state, fully reversible by decline)."""
+    from backend.knowledge.context import confirm_context_kind, season_noun
+
+    kind = ((args or {}).get("kind") or "").strip()
+    ok = await confirm_context_kind(user_id, kind) if kind else False
+    if not ok:
+        return ([TextMessage(body="that one's already moved on, nothing to pin.")], False)
+    return ([TextMessage(body=f"done. i'll keep {season_noun(kind)} front of mind and hold the non-urgent pings.")], True)
+
+
+async def decline_context(user_id: str, args: dict) -> tuple[list, bool]:
+    """The user tapped 'no' on a context confirmation card. Damp the season so it
+    stops asserting and won't re-ask. args: {kind}. Quiet by design."""
+    from backend.knowledge.context import decline_context_kind
+
+    kind = ((args or {}).get("kind") or "").strip()
+    if kind:
+        await decline_context_kind(user_id, kind)
+    return ([TextMessage(body="got it.")], True)
+
+
 # tool name (as the loop puts it in action_map) -> executor
 EXECUTORS = {
     "send_email": send_email,
@@ -212,4 +236,6 @@ EXECUTORS = {
     "book_restaurant": book_restaurant,
     "book_ride": book_ride,
     "order_flowers": order_flowers,
+    "confirm_context": confirm_context,
+    "decline_context": decline_context,
 }
