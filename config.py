@@ -57,5 +57,15 @@ class Settings(BaseSettings):
     fcm_service_account_json: str = ""
     fcm_project_id: str = ""
 
+    # Web-dashboard auth (the magic-link layer). AUTH_SECRET signs the magic +
+    # session tokens; if unset, an ephemeral per-process dev secret is used (dev
+    # only — tokens won't survive a restart or multiple workers). REQUIRE_AUTH=1
+    # makes the dashboard endpoints reject the unauthenticated ?user= fallback,
+    # so a public deploy serves only token-verified per-user data. DASHBOARD_BASE_URL
+    # is where the magic link points (the deployed dashboard origin).
+    auth_secret: str = ""
+    require_auth: bool = False
+    dashboard_base_url: str = ""
+
 
 settings = Settings()

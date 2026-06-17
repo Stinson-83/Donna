@@ -97,6 +97,11 @@ from api.watches import router as _watches_router  # noqa: E402
 
 app.include_router(_watches_router)
 
+# Auth — the web-dashboard magic-link layer (exchange + session, build plan B1).
+from api.auth import router as _auth_router  # noqa: E402
+
+app.include_router(_auth_router)
+
 _wa = WhatsAppChannel()
 _brief_refresh_task: asyncio.Task | None = None
 _bootstrap_task: asyncio.Task | None = None  # backgrounded DB/table bootstrap (keeps startup instant)

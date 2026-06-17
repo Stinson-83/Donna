@@ -106,6 +106,14 @@ async def _run_onboarding_bg(user_id: str) -> None:
     except Exception:
         logger.exception("composio_webhook: onboarding backfill failed user=%s", user_id)
 
+    # A2: after backfill, tell the user their dashboard is ready.
+    try:
+        from backend.onboarding.dashboard_card import send_dashboard_card
+
+        await send_dashboard_card(user_id)
+    except Exception:
+        logger.exception("composio_webhook: dashboard card failed user=%s", user_id)
+
 
 async def _process_v3_gmail(user_id: str, data: dict) -> None:
     """Background processor for a V3 Gmail event: dedupe → ingest → sync mark.
