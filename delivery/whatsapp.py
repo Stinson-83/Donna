@@ -90,6 +90,47 @@ class WhatsAppChannel:
 
     # ── Public interface ───────────────────────────────────────────────────────
 
+    async def send_template(
+        self,
+        phone: str,
+        template_name: str,
+        body_text: str | None = None,
+        language: str = "en",
+    ) -> str | None:
+        """Send an approved HSM template, optionally injecting body_text as {{1}}.
+
+        With body_text=None: sends a fixed-text template (no variables) — used for
+        the donna_reopen re-engagement nudge. With body_text set: injects it as the
+        sole body parameter — used for content-carrying templates.
+
+        The template must be pre-approved in the Meta Business Manager with
+        category=UTILITY. For the reopen template, no variables are needed.
+        """
+        components = []
+        if body_text is not None:
+            components.append({
+                "type": "body",
+                "parameters": [{"type": "text", "text": body_text}],
+            })
+        payload = {
+            "messaging_product": "whatsapp",
+            "to": phone,
+            "type": "template",
+            "template": {
+                "name": template_name,
+                "language": {"code": language},
+                "components": components,
+            },
+        }
+        data = await self._post(payload)
+        try:
+            messages = data.get("messages") or []
+            if messages:
+                return messages[0].get("id")
+        except Exception:
+            return None
+        return None
+
     async def send(self, phone: str, message: OutboundMessage) -> str | None:
         payload = self._render(phone, message)
         data = await self._post(payload)

@@ -67,5 +67,11 @@ class Settings(BaseSettings):
     require_auth: bool = False
     dashboard_base_url: str = ""
 
+    # Meta 24h session-window compliance (A1). When Donna wants to send proactively
+    # and the user hasn't messaged in the last 23h, she sends this fixed-text template
+    # to reopen the conversation window, then queues the actual content for delivery
+    # when the user replies. Template must be UTILITY category, no variables needed.
+    whatsapp_reopen_template: str = "donna_reopen"
+
 
 settings = Settings()

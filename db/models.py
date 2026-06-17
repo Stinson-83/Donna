@@ -682,3 +682,22 @@ class Context(Base):
         Index("uq_context_user_kind", "user_id", "kind", unique=True),
         Index("idx_context_user_state", "user_id", "state"),
     )
+
+
+class PendingProactive(Base):
+    """A proactive message queued because the user was outside the Meta 24h
+    session window when it was generated (A1).
+
+    Flow: Donna wants to say something → user hasn't messaged in 23h+ → send
+    the donna_reopen template to reopen the window → store the actual content
+    here. When the user replies (any message), flush all pending rows for that
+    user as freeform before running the brain loop.
+
+    Rows are soft-expired after 7 days — stale proactives are dropped silently
+    rather than delivered out of context.
+    """
+    __tablename__ = "pending_proactives"
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=generate_uuid)
+    user_id: Mapped[str] = mapped_column(String, ForeignKey("users.id"), nullable=False, index=True)
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, nullable=False)

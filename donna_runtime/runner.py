@@ -106,7 +106,7 @@ async def _donna_turn_core(user_message: str, config: DonnaAgentConfig) -> TurnT
             _OUTBOUND_BUFFER.reset(token)
 
     if config.target_phone and buffer:
-        await _deliver_to_whatsapp(config.target_phone, buffer)
+        await _deliver_to_whatsapp(config.target_phone, buffer, user_id=config.user_id)
 
     return trace
 
@@ -129,12 +129,37 @@ def _emit_tool_call_event(block: ToolUseBlock) -> None:
     )
 
 
-async def _deliver_to_whatsapp(phone: str, messages: list) -> None:
+async def _deliver_to_whatsapp(phone: str, messages: list, *, user_id: str | None = None) -> None:
+    log = logging.getLogger(__name__)
     try:
         from delivery.whatsapp import WhatsAppChannel
         wa = WhatsAppChannel()
+
+        # A1 — Meta 24h compliance: if the user hasn't messaged in 23h, freeform
+        # messages are silently dropped. Collapse to text and send via the approved
+        # utility template instead. If the window is open (or user_id unknown),
+        # send freeform as normal.
+        if user_id:
+            from delivery.session_window import is_within_session_window
+            within_window = await is_within_session_window(user_id)
+        else:
+            within_window = True
+
+        if not within_window:
+            from delivery.messages import Delay
+            from donna_runtime.tool_logic import render_outbound_text
+            from backend.proactive.pending import queue_proactive
+            parts = [render_outbound_text(m) for m in messages if not isinstance(m, Delay)]
+            content = "\n\n".join(p for p in parts if p)
+            if content:
+                # Store the content and send the reopen nudge — content is delivered
+                # as freeform once the user replies and the window reopens.
+                await queue_proactive(user_id, content)
+                log.info("runner: queued proactive + sent reopen template to %s (outside 24h window)", phone[:6])
+            return
+
         wamids = await wa.send_many(phone, messages)
-        logging.getLogger(__name__).info("runner: sent %d WA messages to %s (wamids=%s)", len(messages), phone[:6], wamids)
+        log.info("runner: sent %d WA messages to %s (wamids=%s)", len(messages), phone[:6], wamids)
     except Exception:
         logging.getLogger(__name__).exception("runner: WA delivery failed for %s", phone[:6])
 

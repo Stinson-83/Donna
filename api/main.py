@@ -198,6 +198,20 @@ async def _backfill_assistant_wamid(user_id: str, wamid: str) -> None:
         logger.exception("backfill_assistant_wamid failed for user %s", user_id[:8])
 
 
+async def _touch_last_active(user_id: str) -> None:
+    """Stamp User.last_active_at so the Meta 24h session-window check is accurate."""
+    try:
+        from sqlalchemy import update as sql_update
+        from db.models import User, utcnow
+        async with async_session() as session:
+            await session.execute(
+                sql_update(User).where(User.id == user_id).values(last_active_at=utcnow())
+            )
+            await session.commit()
+    except Exception:
+        logger.exception("_touch_last_active failed for user=%s", user_id[:8])
+
+
 async def _run_pipeline(phone: str, items: list[_DispatchItem]) -> None:
     payloads = [p for p, _ in items]
     row_ids = [rid for _, rid in items if rid]
@@ -208,6 +222,14 @@ async def _run_pipeline(phone: str, items: list[_DispatchItem]) -> None:
 
         state = state_from_payload(merged)
         state = await user_lookup(state)
+
+        # A1: stamp last_active_at so the 24h session-window check stays accurate.
+        await _touch_last_active(state["user_id"])
+
+        # A1: flush any pending proactive messages queued while the user was outside
+        # the 24h window. Delivered before the brain runs so the user gets them first.
+        from backend.proactive.pending import flush_pending
+        await flush_pending(state["user_id"], phone)
 
         # Card button tap → resolve through the card's action_map + §10.3 gate,
         # not a chat turn. 'reopen' re-enters the BRAIN loop with a new prompt;
