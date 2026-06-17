@@ -24,30 +24,47 @@ def test_verify_webhook_signature_rejects_invalid() -> None:
 
 @pytest.mark.asyncio
 async def test_get_or_create_connection_returns_url(monkeypatch) -> None:
-    """Wrapper composes a Composio call and returns (connection_id, url)."""
+    """Resolves the toolkit's auth_config, then mints a connect link via the v3 REST
+    API (the SDK's toolkits.authorize path is deprecated for managed OAuth configs)."""
     captured: dict = {}
 
-    class FakeToolkits:
-        def authorize(self, user_id, app):
-            captured["args"] = (user_id, app)
+    class FakeResp:
+        def __init__(self, payload):
+            self._payload = payload
 
-            class R:
-                redirect_url = "https://composio/oauth/google/abc"
-                connected_account_id = "ca_123"
+        def json(self):
+            return self._payload
 
-            return R()
+        def raise_for_status(self):
+            return None
 
-    class FakeComposio:
-        toolkits = FakeToolkits()
+    class FakeHTTP:
+        async def __aenter__(self):
+            return self
 
-    monkeypatch.setattr(
-        "backend.integrations.composio_client._composio", lambda: FakeComposio()
-    )
+        async def __aexit__(self, *a):
+            return False
+
+        async def get(self, url, headers=None):
+            captured["get_url"] = url
+            return FakeResp({"items": [{"toolkit": {"slug": "gmail"}, "id": "ac_gmail"}]})
+
+        async def post(self, url, headers=None, json=None):
+            captured["post_url"] = url
+            captured["post_body"] = json
+            return FakeResp(
+                {"connected_account_id": "ca_123", "redirect_url": "https://connect.composio.dev/link/lk_abc"}
+            )
+
+    monkeypatch.setattr("httpx.AsyncClient", lambda *a, **k: FakeHTTP())
+
     client = ComposioClient(api_key="x")
     cid, url = await client.get_or_create_connection(user_id="u1", app="GMAIL")
     assert cid == "ca_123"
-    assert url.startswith("https://composio/")
-    assert captured["args"] == ("u1", "GMAIL")
+    assert url.startswith("https://connect.composio.dev/")
+    # GMAIL → toolkit slug 'gmail' resolves to its auth_config, posted with the user id
+    assert "auth_configs" in captured["get_url"]
+    assert captured["post_body"] == {"auth_config_id": "ac_gmail", "user_id": "u1"}
 
 
 @pytest.mark.asyncio

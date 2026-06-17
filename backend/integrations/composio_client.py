@@ -25,6 +25,11 @@ logger = logging.getLogger(__name__)
 APP_GMAIL = "GMAIL"
 APP_GOOGLE_CALENDAR = "GOOGLECALENDAR"
 
+# Composio v3 REST base. We call this directly for connection initiation because
+# the pinned SDK's toolkits.authorize() hits a now-deprecated endpoint that 400s
+# for composio-managed OAuth auth configs ("use /connected_accounts/link instead").
+_COMPOSIO_API_BASE = "https://backend.composio.dev/api/v3"
+
 
 # Trigger name constants — verify against current Composio docs at impl time.
 TRIGGER_GMAIL_NEW_MESSAGE = "GMAIL_NEW_GMAIL_MESSAGE"
@@ -258,15 +263,42 @@ class ComposioClient:
     async def get_or_create_connection(
         self, user_id: str, app: str
     ) -> tuple[str, str]:
-        """Return (connection_id, oauth_redirect_url) for a given (user, app).
+        """Return (connected_account_id, oauth_redirect_url) for a given (user, app).
 
-        Idempotent at the SDK level — if a connection already exists for this
-        (user_id, app), Composio returns the existing connection. The URL is
-        the OAuth start URL the user must tap.
+        The SDK's toolkits.authorize() path is deprecated for composio-managed OAuth
+        auth configs (Composio now 400s it), so we call the v3 REST API directly:
+        resolve the auth_config for the app's toolkit, then POST /connected_accounts/link
+        to mint the end-user redirect URL. Raises if no auth_config exists for the
+        toolkit (e.g. the toolkit was never set up in this Composio account).
         """
-        composio = _composio()
-        result = composio.toolkits.authorize(user_id, app)
-        return result.connected_account_id, result.redirect_url
+        import httpx
+
+        toolkit_slug = app.lower()
+        headers = {"x-api-key": self.api_key, "Content-Type": "application/json"}
+        async with httpx.AsyncClient(timeout=20) as http:
+            cfgs = (
+                await http.get(f"{_COMPOSIO_API_BASE}/auth_configs", headers=headers)
+            ).json()
+            auth_config_id = None
+            for ac in cfgs.get("items", []):
+                tk = ac.get("toolkit") or {}
+                ac_slug = (tk.get("slug") if isinstance(tk, dict) else tk) or ""
+                if str(ac_slug).lower() == toolkit_slug:
+                    auth_config_id = ac.get("id")
+                    break
+            if not auth_config_id:
+                raise RuntimeError(
+                    f"no Composio auth config for toolkit {toolkit_slug!r} — "
+                    "set it up in the Composio dashboard first"
+                )
+            resp = await http.post(
+                f"{_COMPOSIO_API_BASE}/connected_accounts/link",
+                headers=headers,
+                json={"auth_config_id": auth_config_id, "user_id": user_id},
+            )
+            resp.raise_for_status()
+            data = resp.json()
+        return data["connected_account_id"], data["redirect_url"]
 
     async def subscribe_triggers(
         self,

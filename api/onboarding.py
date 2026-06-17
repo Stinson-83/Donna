@@ -8,9 +8,12 @@ Also runs automatically in the background when an account connection completes
 """
 from __future__ import annotations
 
+import logging
+
 from fastapi import APIRouter
 from pydantic import BaseModel
 
+logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
@@ -39,8 +42,12 @@ async def connect(body: ConnectBody) -> dict:
         _conn, url = await ComposioClient(
             api_key=settings.composio_api_key or ""
         ).get_or_create_connection(user_id, provider)
-    except Exception:
-        return {"ok": False, "user_id": user_id, "provider": provider, "error": "connect_failed"}
+    except Exception as exc:
+        logger.exception("onboarding/connect failed user=%s provider=%s", user_id[:8], provider)
+        return {
+            "ok": False, "user_id": user_id, "provider": provider,
+            "error": "connect_failed", "detail": f"{type(exc).__name__}: {exc}",
+        }
     return {"ok": True, "user_id": user_id, "provider": provider, "url": url}
 
 
