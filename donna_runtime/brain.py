@@ -15,7 +15,7 @@ from .config import DonnaAgentConfig, _stateless_sessions_default
 from .context_builder import load_user_model_block, render_turn_context
 from .hooks import _OUTBOUND_BUFFER
 from .observability import emit_error, emit_retry_fired
-from .runner import traced_donna_turn
+from .runner import _should_retry_without_resume, traced_donna_turn
 from .session_store import resolve_session_id_db, save_user_session_db
 
 logger = logging.getLogger(__name__)
@@ -77,9 +77,30 @@ async def donna_turn(state: dict, config: DonnaAgentConfig | None = None) -> dic
             fresh_cfg = replace(cfg, resume_session_id=None, fork_session=False)
             trace = await traced_donna_turn(raw, fresh_cfg)
     except Exception as exc:
-        logger.exception("brain: SDK loop failed for user=%s", user_id[:8])
-        emit_error(where="brain.donna_turn", error=f"{type(exc).__name__}: {exc}")
-        failed = True
+        # A resumed session can vanish when the bundled-CLI conversation store
+        # resets — e.g. a fresh container after a redeploy — and the SDK then
+        # exits non-zero ("No conversation found with session ID"). If we were
+        # resuming, retry once from a fresh session before falling back. Without
+        # this, every returning user gets "hm, one sec" after each deploy until
+        # their stored session id naturally turns over.
+        if resume_id and _should_retry_without_resume(exc):
+            logger.warning(
+                "brain: resumed session %s failed (%s) for user=%s — retrying fresh",
+                resume_id[:8], type(exc).__name__, user_id[:8],
+            )
+            emit_retry_fired(kind="stale_resume", reason=str(exc)[:200], source="brain")
+            buffer.clear()
+            try:
+                fresh_cfg = replace(cfg, resume_session_id=None, fork_session=False)
+                trace = await traced_donna_turn(raw, fresh_cfg)
+            except Exception as exc2:
+                logger.exception("brain: fresh retry also failed for user=%s", user_id[:8])
+                emit_error(where="brain.donna_turn", error=f"{type(exc2).__name__}: {exc2}")
+                failed = True
+        else:
+            logger.exception("brain: SDK loop failed for user=%s", user_id[:8])
+            emit_error(where="brain.donna_turn", error=f"{type(exc).__name__}: {exc}")
+            failed = True
     finally:
         _OUTBOUND_BUFFER.reset(token)
 

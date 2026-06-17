@@ -290,6 +290,10 @@ def _fetch_active_attentions(user_id: str) -> list[Any]:
         return AttentionStore().list(user_id=user_id, status=AttentionStatus.LIVE)[
             :_MAX_TODAY_ATTENTIONS
         ]
+    except ModuleNotFoundError:
+        # The attention feature isn't present in this build — degrade quietly
+        # rather than logging a full traceback on every turn.
+        return []
     except Exception:
         logger.exception("load_today_block: attentions fetch failed")
         return []

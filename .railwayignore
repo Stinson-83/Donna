@@ -1,0 +1,43 @@
+# Heavy directories not needed in production
+remotion-demo/
+webapp/node_modules/
+node_modules/
+
+# Dev/test artifacts
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.venv/
+venv/
+
+# Local state
+.env
+.donna_sessions.json
+donna_traces.jsonl
+donna_gate.jsonl
+logs/
+*.log
+db/donna.db*
+
+# Docs / demo (not needed at runtime)
+docs/
+docs_v2/
+evals/
+remotion-demo/
+DEMO_MODE.md
+DEMO_VIDEO_FINAL_DESIGN.md
+MOTION_STORYBOARD.md
+donna-demo-final.md
+donna-matt-locked-profile.md
+
+# IDE / OS
+.DS_Store
+.idea/
+.vscode/
+.claude/
+archive/
