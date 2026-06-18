@@ -35,7 +35,7 @@ async def test_library_counts(db, monkeypatch):
         s.add(Document(user_id=other, storage_path="/d/2", filename="other.pdf"))
         await s.commit()
 
-    out = await library(user="+lib")
+    out = await library(user_id=user_id)
     assert out["people"] == 2
     assert out["documents"] == 1  # the other user's doc is excluded
     assert out["trackers"] == 1   # only the active watch
@@ -62,7 +62,7 @@ async def test_library_todos_detail_and_done(db):
         ])
         await s.commit()
 
-    out = await library_todos(user="+lib")
+    out = await library_todos(user_id=user_id)
     contents = [t["content"] for t in out["todos"]]
     assert contents == ["renew passport", "reply to landlord"]  # dated first, closed excluded
     assert out["todos"][0]["due"] == "due in 3d"
@@ -71,7 +71,7 @@ async def test_library_todos_detail_and_done(db):
     # mark done -> settles like close_open_loop, disappears from the list
     res = await library_todo_done(TodoDoneBody(user="+lib", id=out["todos"][0]["id"]))
     assert res["ok"] is True
-    out2 = await library_todos(user="+lib")
+    out2 = await library_todos(user_id=user_id)
     assert [t["content"] for t in out2["todos"]] == ["reply to landlord"]
 
     # another user's todo can't be closed through this user
@@ -96,7 +96,7 @@ async def test_library_trackers_detail_and_retire(db):
         ])
         await s.commit()
 
-    out = await library_trackers(user="+lib")
+    out = await library_trackers(user_id=user_id)
     assert [t["title"] for t in out["trackers"]] == ["flight SQ516", "arsenal"]  # importance desc
     assert out["trackers"][0]["note"] == "delayed"          # flight carries its status
     assert out["trackers"][1]["note"] == "2 results seen"   # web carries its baseline size
@@ -104,7 +104,7 @@ async def test_library_trackers_detail_and_retire(db):
     # retire -> status flip via the watch system, gone from the list
     res = await library_tracker_retire(TrackerRetireBody(user="+lib", id=out["trackers"][0]["id"]))
     assert res["ok"] is True
-    out2 = await library_trackers(user="+lib")
+    out2 = await library_trackers(user_id=user_id)
     assert [t["title"] for t in out2["trackers"]] == ["arsenal"]
 
     # cross-user retire is refused
@@ -129,7 +129,7 @@ async def test_library_people_detail(db):
         ]}}
         await s.commit()
 
-    out = await library_people(user="+lib")
+    out = await library_people(user_id=user_id)
     names = [p["name"] for p in out["people"]]
     assert names == ["Mom", "Raghav"]            # importance desc
     assert out["people"][0]["birthday"] == "06-20"
@@ -160,11 +160,11 @@ async def test_library_documents_and_connected_detail(db):
         ])
         await s.commit()
 
-    docs = await library_documents(user="+lib")
+    docs = await library_documents(user_id=user_id)
     assert [d["filename"] for d in docs["documents"]] == ["lease.pdf", "permit.png"]  # newest first
     assert docs["documents"][0]["added"] == "today" and docs["documents"][0]["size"] == "234 KB"
     assert docs["documents"][1]["status"] == "processing"
 
-    conn = await library_connected(user="+lib")
+    conn = await library_connected(user_id=user_id)
     healthy = {c["product"]: c["healthy"] for c in conn["connected"]}
     assert healthy == {"googlecalendar": True, "github": False}  # pending isn't healthy

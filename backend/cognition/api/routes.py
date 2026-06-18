@@ -7,10 +7,11 @@ POST /journal /voice /feedback
 """
 from __future__ import annotations
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from sqlalchemy import select
 
+from api.auth import current_user_id
 from backend.cognition import beliefs as _b  # noqa: F401 (package marker)
 from backend.cognition.beliefs.service import (
     get_belief, list_beliefs, list_revisions,
@@ -94,10 +95,10 @@ async def serialize_belief(session, b: Belief, obs_by_id: dict, *, full=False) -
 
 # ── reads ────────────────────────────────────────────────────────────────────
 @router.get("/plan")
-async def get_plan(user: str = DEFAULT_USER) -> dict:
+async def get_plan(user_id: str = Depends(current_user_id)) -> dict:
     async with async_session() as s:
-        plan = await latest_plan(s, user)
-        loops = await list_open_loops(s, user)
+        plan = await latest_plan(s, user_id)
+        loops = await list_open_loops(s, user_id)
         nudge_belief = None
         if plan and plan.nudge_belief_id:
             b = await get_belief(s, plan.nudge_belief_id)
@@ -123,26 +124,26 @@ async def get_plan(user: str = DEFAULT_USER) -> dict:
 
 
 @router.get("/beliefs")
-async def get_beliefs(user: str = DEFAULT_USER) -> list[dict]:
+async def get_beliefs(user_id: str = Depends(current_user_id)) -> list[dict]:
     async with async_session() as s:
-        obs_by_id = {o.id: o for o in await _observations(s, user)}
-        return [await serialize_belief(s, b, obs_by_id) for b in await list_beliefs(s, user)]
+        obs_by_id = {o.id: o for o in await _observations(s, user_id)}
+        return [await serialize_belief(s, b, obs_by_id) for b in await list_beliefs(s, user_id)]
 
 
 @router.get("/beliefs/{belief_id}")
-async def get_one_belief(belief_id: str, user: str = DEFAULT_USER) -> dict:
+async def get_one_belief(belief_id: str, user_id: str = Depends(current_user_id)) -> dict:
     async with async_session() as s:
         b = await get_belief(s, belief_id)
         if not b:
             return {"error": "not found"}
-        obs_by_id = {o.id: o for o in await _observations(s, user)}
+        obs_by_id = {o.id: o for o in await _observations(s, user_id)}
         return await serialize_belief(s, b, obs_by_id, full=True)
 
 
 @router.get("/belief-history")
-async def get_belief_history(user: str = DEFAULT_USER) -> list[dict]:
+async def get_belief_history(user_id: str = Depends(current_user_id)) -> list[dict]:
     async with async_session() as s:
-        revs = await list_revisions(s, user)
+        revs = await list_revisions(s, user_id)
         return [
             {
                 "id": r.id,
@@ -155,20 +156,20 @@ async def get_belief_history(user: str = DEFAULT_USER) -> list[dict]:
 
 
 @router.get("/questions")
-async def get_questions(user: str = DEFAULT_USER) -> list[dict]:
+async def get_questions(user_id: str = Depends(current_user_id)) -> list[dict]:
     async with async_session() as s:
         return [
             {"id": q.id, "confidence": q.confidence, "question": q.question, "status": q.leaning or "", "leaning": None}
-            for q in await list_questions(s, user)
+            for q in await list_questions(s, user_id)
         ]
 
 
 @router.get("/memory")
-async def get_memory_list(user: str = DEFAULT_USER, limit: int = 12) -> list[dict]:
+async def get_memory_list(limit: int = 12, user_id: str = Depends(current_user_id)) -> list[dict]:
     async with async_session() as s:
-        mems = await list_memories(s, user, limit=limit)
-        observations = await _observations(s, user)
-        beliefs = {b.subject: b for b in await list_beliefs(s, user)}
+        mems = await list_memories(s, user_id, limit=limit)
+        observations = await _observations(s, user_id)
+        beliefs = {b.subject: b for b in await list_beliefs(s, user_id)}
         out = []
         for m in mems:
             supports = _distinct(
@@ -190,13 +191,13 @@ async def get_memory_list(user: str = DEFAULT_USER, limit: int = 12) -> list[dic
 
 
 @router.get("/memory/{memory_id}")
-async def get_one_memory(memory_id: str, user: str = DEFAULT_USER) -> dict:
+async def get_one_memory(memory_id: str, user_id: str = Depends(current_user_id)) -> dict:
     async with async_session() as s:
         m = await get_memory(s, memory_id)
         if not m:
             return {"error": "not found"}
-        observations = await _observations(s, user)
-        beliefs = {b.subject: b for b in await list_beliefs(s, user)}
+        observations = await _observations(s, user_id)
+        beliefs = {b.subject: b for b in await list_beliefs(s, user_id)}
         supports = _distinct(
             [beliefs[o.subject].statement for o in observations if m.id in (o.memory_ids or []) and o.subject in beliefs]
         )
@@ -214,17 +215,17 @@ async def get_one_memory(memory_id: str, user: str = DEFAULT_USER) -> dict:
 
 
 @router.get("/graph")
-async def get_graph(user: str = DEFAULT_USER) -> dict:
+async def get_graph(user_id: str = Depends(current_user_id)) -> dict:
     async with async_session() as s:
-        return await build_graph(s, user)
+        return await build_graph(s, user_id)
 
 
 @router.get("/open-loops")
-async def get_open_loops(user: str = DEFAULT_USER) -> list[dict]:
+async def get_open_loops(user_id: str = Depends(current_user_id)) -> list[dict]:
     async with async_session() as s:
         return [
             {"id": l.id, "text": l.description, "meta": l.meta, "source": l.source, "priority": l.priority}
-            for l in await list_open_loops(s, user)
+            for l in await list_open_loops(s, user_id)
         ]
 
 

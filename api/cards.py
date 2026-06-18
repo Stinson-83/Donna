@@ -12,10 +12,11 @@ from __future__ import annotations
 
 import logging
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from sqlalchemy import select
 
+from api.auth import current_user_id
 from backend.cards.projection import card_to_app
 from db.models import Card
 from db.session import async_session
@@ -37,10 +38,7 @@ async def _active_cards(user_id: str) -> list[dict]:
 
 
 @router.get("/cards")
-async def list_cards(user: str) -> dict:
-    from api.push import resolve_user_id
-
-    user_id = await resolve_user_id(user)
+async def list_cards(user_id: str = Depends(current_user_id)) -> dict:
     return {"user_id": user_id, "cards": await _active_cards(user_id)}
 
 
@@ -85,18 +83,16 @@ async def card_action(body: CardActionBody) -> dict:
 
 
 @router.get("/today")
-async def today(user: str) -> dict:
+async def today(user_id: str = Depends(current_user_id)) -> dict:
     """The Today/Dashboard meta: next-24h calendar (the day rail) + the 'holding'
     count (active watches + pending cards + open loops)."""
     from datetime import timedelta
 
     from sqlalchemy import func, select
 
-    from api.push import resolve_user_id
     from db.models import CalendarEntry, Card, OpenLoop, Watch, utcnow
     from db.session import async_session
 
-    user_id = await resolve_user_id(user)
     now = utcnow()
 
     def _t(dt):
@@ -123,15 +119,13 @@ async def today(user: str) -> dict:
 
 
 @router.get("/history")
-async def history(user: str, limit: int = 80) -> dict:
+async def history(limit: int = 80, user_id: str = Depends(current_user_id)) -> dict:
     """The cross-surface message stream (app + WhatsApp), chronological."""
     from sqlalchemy import select
 
-    from api.push import resolve_user_id
     from db.models import ChatMessage
     from db.session import async_session
 
-    user_id = await resolve_user_id(user)
     async with async_session() as s:
         rows = (await s.execute(
             select(ChatMessage).where(ChatMessage.user_id == user_id)
@@ -164,15 +158,13 @@ class SettingsBody(BaseModel):
 
 
 @router.get("/settings")
-async def get_settings(user: str) -> dict:
+async def get_settings(user_id: str = Depends(current_user_id)) -> dict:
     """The user's preferences. notify_channel: which surface Donna reaches you on."""
     from sqlalchemy import select
 
-    from api.push import resolve_user_id
     from db.models import User
     from db.session import async_session
 
-    user_id = await resolve_user_id(user)
     async with async_session() as s:
         u = (await s.execute(select(User).where(User.id == user_id))).scalar_one_or_none()
     return {"user_id": user_id, "notify_channel": (u.notify_channel if u else "auto") or "auto"}
@@ -197,27 +189,23 @@ async def set_settings(body: SettingsBody) -> dict:
 
 
 @router.get("/watchbar")
-async def watchbar(user: str) -> dict:
+async def watchbar(user_id: str = Depends(current_user_id)) -> dict:
     """The Dynamic Watch Bar: one ranked 'what matters now' across pending cards,
     active watches, and due tasks. Reorders live as priorities shift."""
-    from api.push import resolve_user_id
     from backend.knowledge.attention import rank_attention
 
-    user_id = await resolve_user_id(user)
     return {"user_id": user_id, "items": await rank_attention(user_id)}
 
 
 @router.get("/library")
-async def library(user: str) -> dict:
+async def library(user_id: str = Depends(current_user_id)) -> dict:
     """Counts behind the Library drawer: people, documents, trackers (active
     watches), to-dos (open loops), connected accounts."""
     from sqlalchemy import func, select
 
-    from api.push import resolve_user_id
     from db.models import Document, Integration, OpenLoop, User, Watch
     from db.session import async_session
 
-    user_id = await resolve_user_id(user)
     async with async_session() as s:
         u = (await s.execute(select(User).where(User.id == user_id))).scalar_one_or_none()
         people = 0
@@ -239,16 +227,14 @@ async def library(user: str) -> dict:
 
 
 @router.get("/library/todos")
-async def library_todos(user: str) -> dict:
+async def library_todos(user_id: str = Depends(current_user_id)) -> dict:
     """The To-dos detail list: active open loops, deadlined ones first (soonest
     due at the top), then undated by recency."""
     from sqlalchemy import select
 
-    from api.push import resolve_user_id
     from db.models import OpenLoop, utcnow
     from db.session import async_session
 
-    user_id = await resolve_user_id(user)
     now = utcnow()
     async with async_session() as s:
         rows = (await s.execute(
@@ -307,16 +293,14 @@ async def library_todo_done(body: TodoDoneBody) -> dict:
 
 
 @router.get("/library/trackers")
-async def library_trackers(user: str) -> dict:
+async def library_trackers(user_id: str = Depends(current_user_id)) -> dict:
     """The Trackers detail list: active watches with their cadence + state, most
     important first. A flight watch carries its last-known status."""
     from sqlalchemy import select
 
-    from api.push import resolve_user_id
     from db.models import Watch
     from db.session import async_session
 
-    user_id = await resolve_user_id(user)
     async with async_session() as s:
         rows = (await s.execute(
             select(Watch).where(Watch.user_id == user_id, Watch.status == "active")
@@ -385,16 +369,14 @@ def _added(dt, now) -> str | None:
 
 
 @router.get("/library/people")
-async def library_people(user: str) -> dict:
+async def library_people(user_id: str = Depends(current_user_id)) -> dict:
     """The People detail: relationships from the living profile, most important
     first, with whatever Donna knows (relation, email, birthday, a note)."""
     from sqlalchemy import select
 
-    from api.push import resolve_user_id
     from db.models import User
     from db.session import async_session
 
-    user_id = await resolve_user_id(user)
     async with async_session() as s:
         u = (await s.execute(select(User).where(User.id == user_id))).scalar_one_or_none()
 
@@ -426,15 +408,13 @@ async def library_people(user: str) -> dict:
 
 
 @router.get("/library/documents")
-async def library_documents(user: str) -> dict:
+async def library_documents(user_id: str = Depends(current_user_id)) -> dict:
     """The Documents detail: files Donna holds, most recent first."""
     from sqlalchemy import select
 
-    from api.push import resolve_user_id
     from db.models import Document, utcnow
     from db.session import async_session
 
-    user_id = await resolve_user_id(user)
     now = utcnow()
     async with async_session() as s:
         rows = (await s.execute(
@@ -466,16 +446,14 @@ async def library_documents(user: str) -> dict:
 
 
 @router.get("/library/connected")
-async def library_connected(user: str) -> dict:
+async def library_connected(user_id: str = Depends(current_user_id)) -> dict:
     """The Connected detail: integrations and their health (the source of truth is
     the integrations table, per the model)."""
     from sqlalchemy import select
 
-    from api.push import resolve_user_id
     from db.models import Integration, utcnow
     from db.session import async_session
 
-    user_id = await resolve_user_id(user)
     now = utcnow()
     async with async_session() as s:
         rows = (await s.execute(

@@ -10,8 +10,10 @@ from __future__ import annotations
 
 import logging
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel
+
+from api.auth import current_user_id
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -62,9 +64,7 @@ async def run(body: RunBody) -> dict:
 
 
 @router.get("/onboarding/status")
-async def status(user: str) -> dict:
-    from api.push import resolve_user_id
+async def status(user_id: str = Depends(current_user_id)) -> dict:
     from backend.onboarding.service import onboarding_status
 
-    user_id = await resolve_user_id(user)
     return {"user_id": user_id, **await onboarding_status(user_id)}

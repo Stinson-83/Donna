@@ -93,6 +93,6 @@ async def test_watchbar_endpoint_is_user_scoped(db):
         s.add(_card(other, "heads_up", "theirs"))
         await s.commit()
 
-    out = await watchbar(user="+bar")
+    out = await watchbar(user_id=uid)
     titles = [it["title"] for it in out["items"]]
     assert titles == ["mine"]  # the other user's card is excluded
