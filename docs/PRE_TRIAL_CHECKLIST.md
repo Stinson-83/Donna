@@ -28,8 +28,21 @@ Status legend: `[x]` done/verified · `[ ]` to do · `[~]` optional
 The test-number token from "API Setup" **expires in 24h**. Before the trial starts, replace it with a non-expiring **System User** token.
 
 - [ ] Create your own Meta app + free test number (see "WhatsApp app setup" below).
-- [ ] Generate a **System User** token: business.facebook.com → **Business Settings** → **Users → System Users** → Add → assign the app → **Generate token** with scopes `whatsapp_business_messaging` + `whatsapp_business_management` → **never expires**.
+- [ ] Generate a **System User** token (steps below) — set to **never expire**.
 - [ ] Paste it to me → I set `WHATSAPP_TOKEN` on all three Railway services + redeploy.
+
+#### How to generate the permanent System User token
+Do this on the same Meta app you create. You must be an **Admin** of the Business
+portfolio that owns the app (auto-created when you added WhatsApp).
+
+1. **Open Business Settings** → https://business.facebook.com/settings (same login that owns the app). Pick the portfolio tied to your Donna app. Direct page: https://business.facebook.com/settings/system-users
+2. **Create the system user** → left sidebar **Users → System users → Add** → name `donna-system` → role **Admin** → **Create system user**.
+3. **Assign BOTH assets** (the commonly-missed step — without it the token can't send or manage templates):
+   - With `donna-system` selected → **Add assets → Apps** → select your **Donna** app → toggle **Manage app** (full control) → **Save**.
+   - **Add assets → WhatsApp accounts** → select your **WhatsApp Business Account** → toggle full control → **Save**.
+4. **Generate the token** → **Generate new token** → App: your **Donna** app → **Token expiration: Never** → check permissions **`whatsapp_business_messaging`** + **`whatsapp_business_management`** → **Generate token**.
+5. **Copy it immediately** — shown only once (start `EAA…`). Lost = just generate another.
+6. **Hand it back** — paste to me / `railway variables set WHATSAPP_TOKEN=<token>`. I verify via `debug_token` (should show `"expires_at": 0` = never). The phone number ID + WABA ID from **WhatsApp → API Setup** don't change; only the token does.
 
 ### 2. Composio webhook + investor connects Google  ⭐ BIGGEST LEVER
 Powers real Gmail/Calendar **tasks** AND most **proactiveness** (calendar/email tables only fill from Composio ingest). Without it, Donna only sees what's typed to her.
