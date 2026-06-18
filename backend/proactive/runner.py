@@ -44,11 +44,15 @@ def default_checks() -> list[ProactiveCheck]:
     from backend.proactive.morning_brief import maybe_send_morning_brief
     from backend.proactive.prepare import maybe_prepare_upcoming
     from backend.proactive.schedule_health import maybe_surface_schedule_issue
+    from backend.proactive.situation_brief import maybe_refresh_situation_brief
 
     return [
         # Pure state pass first: recompute the Context Layer so every check + the
         # dashboard below reads a fresh "season of life". Never surfaces.
         maybe_refresh_contexts,
+        # Regenerate the temporal situation brief (~once/20h, self-throttled) so the
+        # 'last week / this week / next' mental model stays current. Never surfaces.
+        maybe_refresh_situation_brief,
         # Then, on the fresh state, ask to confirm a season that just turned
         # high-confidence (§8) — at most once per season, deduped.
         maybe_confirm_context,
