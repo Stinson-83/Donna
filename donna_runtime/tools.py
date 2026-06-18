@@ -318,6 +318,56 @@ async def read_gmail_thread(args):
 
 
 @tool(
+    "create_calendar_event",
+    "Add an event to the user's Google Calendar. Use when the user asks you to "
+    "put something on their calendar: a meeting, a call, a block of focus time, "
+    "an appointment. L2 — just do it, then tell them it's added. Provide "
+    "`start_iso` as a FULL ISO-8601 datetime in the USER'S timezone, e.g. "
+    "'2026-06-19T14:00:00+08:00' (compute it from their words + the timezone in "
+    "context). Do NOT use to set a reminder or nudge (use schedule for that), to "
+    "book a paid/third-party thing (those are their own flows), or when the "
+    "[INTEGRATIONS] block shows google_calendar as not_connected.",
+    {
+        "type": "object",
+        "required": ["title", "start_iso"],
+        "properties": {
+            "title": {"type": "string"},
+            "start_iso": {"type": "string", "description": "ISO-8601 datetime in the user's timezone"},
+            "duration_minutes": {"type": "integer"},
+            "location": {"type": "string"},
+            "description": {"type": "string"},
+        },
+    },
+)
+@traceable(name="donna.tool.create_calendar_event", run_type="tool")
+async def create_calendar_event(args):
+    user_id = _current_user_id()
+    if not user_id:
+        return text_content("Cannot add event: no user_id in scope.")
+    title = str(args.get("title") or "").strip()
+    start_iso = str(args.get("start_iso") or "").strip()
+    if not title or not start_iso:
+        return text_content("Need a title and a start time to add a calendar event.")
+
+    from config import settings
+    from backend.integrations.composio_client import ComposioClient
+
+    try:
+        await ComposioClient(api_key=settings.composio_api_key or "").create_calendar_event(
+            user_id,
+            title=title,
+            start_iso=start_iso,
+            duration_minutes=int(args.get("duration_minutes") or 60),
+            location=(str(args.get("location") or "").strip() or None),
+            description=(str(args.get("description") or "").strip() or None),
+        )
+    except Exception:
+        logger.exception("create_calendar_event tool failed user=%s", user_id[:8])
+        return text_content("couldn't add that to your calendar — is google calendar connected?")
+    return text_content(f"added to your calendar: {title}.")
+
+
+@tool(
     "log_observation",
     "Record a countable user event. `type` is the category (expense, meal, mood, "
     "sleep, habit, exercise, symptom). `fields` is the numeric/structured payload "
@@ -993,7 +1043,7 @@ async def check_calendar(args):
             },
             "watch_type": {
                 "type": "string",
-                "description": "'reply' when waiting on an email/message from someone (set `subject` to who). 'web' to monitor the web for news/updates on a topic (set `subject` to the search topic). Otherwise 'generic'.",
+                "description": "'reply' when waiting on an email/message from someone (set `subject` to who). 'web' to monitor the web for news/updates on a topic (set `subject` to the search topic). 'generic' is a last resort — generic watches are recorded and shown in the watch list but are NOT actively monitored (there's no live source to check), so prefer 'reply'/'web' when they fit, and for anything with a date use schedule (a reminder) instead.",
             },
             "subject": {
                 "type": "string",
@@ -1045,9 +1095,19 @@ async def watch(args):
     except Exception:
         logger.exception("watch tool: create_watch failed")
         return text_content("Watch not created: internal error (non-fatal, just reply).")
+    if watch_type in ("reply", "web", "flight"):
+        return text_content(
+            f"watch created: '{intent}' (type={watch_type}). i'll keep an eye on it and "
+            "tell you when something changes."
+        )
+    # generic: recorded + visible in the watch list, but there's no live source to
+    # monitor an arbitrary topic, so don't promise active monitoring — it would
+    # silently never fire. Be honest and steer toward a reminder for dated things.
     return text_content(
-        f"watch created: '{intent}' (type={watch_type}). i'll keep an eye on it and "
-        "tell you when something changes."
+        f"noted '{intent}' on your watch list. heads up: i can't actively monitor that "
+        "one on my own (no live feed for it), so i'll bring it up when it's relevant "
+        "rather than ping you out of nowhere. if it has a date, want me to set a reminder "
+        "so it doesn't slip?"
     )
 
 
@@ -2246,6 +2306,9 @@ DONNA_TOOLS = (
     track_task,
     track_flight,
     check_calendar,
+    list_gmail_recent,
+    read_gmail_thread,
+    create_calendar_event,
     image,
     web_search,
     agentic_web_search,

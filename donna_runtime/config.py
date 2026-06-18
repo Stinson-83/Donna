@@ -29,6 +29,9 @@ ALLOWED_TOOLS = (
     "mcp__donna__recall_about",
     "mcp__donna__read_connections",
     "mcp__donna__check_calendar",
+    "mcp__donna__list_gmail_recent",
+    "mcp__donna__read_gmail_thread",
+    "mcp__donna__create_calendar_event",
     # Action (write side effects)
     "mcp__donna__remember",
     "mcp__donna__watch",
