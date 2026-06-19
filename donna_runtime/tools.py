@@ -368,6 +368,38 @@ async def create_calendar_event(args):
 
 
 @tool(
+    "open_dashboard",
+    "Send the user a fresh link to their personal web dashboard — the same memory as "
+    "WhatsApp, in one view: what donna believes, the evidence behind it, their "
+    "schedule, and what she's watching. Use when the user asks to open / see / get to "
+    "their dashboard, or asks for the link (e.g. 'dashboard', 'open my dashboard', "
+    "'send me the link', 'where do i see all this'). ALWAYS mint a fresh link with "
+    "this tool — links are single-use and expire in 15 minutes, so never reuse an old "
+    "one. Do NOT use when the user didn't ask about the dashboard. The link in the "
+    "result MUST be forwarded to the user verbatim (raw urls auto-linkify in chat).",
+    {"type": "object", "properties": {}},
+)
+@traceable(name="donna.tool.open_dashboard", run_type="tool")
+async def open_dashboard(args):
+    user_id = _current_user_id()
+    if not user_id:
+        return text_content("Cannot open dashboard: no user_id in scope.")
+    from config import settings
+
+    if not (settings.dashboard_base_url or "").strip():
+        return text_content(
+            "the web dashboard isn't set up yet (no DASHBOARD_BASE_URL). tell the user it's coming soon."
+        )
+    from api.auth import mint_magic_link
+
+    link = mint_magic_link(user_id)
+    return text_content(
+        f"your dashboard — everything i know about your life in one place. opens you "
+        f"straight in, good for 15 min: {link}"
+    )
+
+
+@tool(
     "log_observation",
     "Record a countable user event. `type` is the category (expense, meal, mood, "
     "sleep, habit, exercise, symptom). `fields` is the numeric/structured payload "
@@ -2309,6 +2341,7 @@ DONNA_TOOLS = (
     list_gmail_recent,
     read_gmail_thread,
     create_calendar_event,
+    open_dashboard,
     image,
     web_search,
     agentic_web_search,

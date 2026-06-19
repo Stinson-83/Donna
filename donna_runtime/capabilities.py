@@ -160,7 +160,8 @@ PROVIDERS: tuple[Provider, ...] = (
 # consistency test asserts CAPABILITY_TOOLS ∪ INTERNAL_TOOLS == the live catalog.
 INTERNAL_TOOLS: frozenset[str] = frozenset({
     "remember", "watch", "schedule", "track_goal", "track_interest", "set_focus",
-    "track_task", "track_flight", "form_belief", "image", "send_burst", "render_card",
+    "track_task", "track_flight", "form_belief", "image", "open_dashboard",
+    "send_burst", "render_card",
 })
 
 # Executors that are internal handlers (not world-commit actions): the Context-Layer
