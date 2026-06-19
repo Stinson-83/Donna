@@ -10,12 +10,14 @@ import Drawer from './components/Drawer.jsx'
 import TodayPage from './pages/TodayPage.jsx'
 import LivePage from './pages/LivePage.jsx'
 import HistoryPage from './pages/HistoryPage.jsx'
+import BeliefsPage from './pages/BeliefsPage.jsx'
+import MemoryPage from './pages/MemoryPage.jsx'
 import { hasIdentity, getUserId } from './identity.js'
 
-// Memory tab is parked for now (backend + MemoryPage stay; just not surfaced).
-// To resurface: re-import MemoryPage, add `memory: MemoryPage` here, and restore
-// the memory entry in TabBar.
-const PAGES = { dashboard: TodayPage, live: LivePage, history: HistoryPage }
+// Understanding-first surfaces: beliefs (what Donna believes) + memory (the
+// evidence) are live in the nav alongside the dashboard + conversation. Plan
+// stays parked for now (PlanPage + /cognition/plan exist; just not surfaced).
+const PAGES = { dashboard: TodayPage, beliefs: BeliefsPage, memory: MemoryPage, live: LivePage, history: HistoryPage }
 
 export default function App() {
   const [tab, setTab] = useState('dashboard')
