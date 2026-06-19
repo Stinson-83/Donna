@@ -118,8 +118,8 @@ function scriptedReply(message) {
   }
   return [
     { type: 'delay', seconds: 0.7 },
-    { type: 'text', text: "noted." },
-    { type: 'text', text: "heads up: i'm in demo mode right now (scripted). add an anthropic key + run the backend and this becomes the real me." },
+    { type: 'text', text: "noted. i'll hold onto that." },
+    { type: 'text', text: "say a bit more and i'll tell you what i actually think." },
   ]
 }
 

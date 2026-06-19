@@ -41,7 +41,10 @@ export default function TodayPage({ onMenu }) {
     }
   }
 
-  const empty = ready && cards.length === 0 && watching.length === 0 && (today.calendar?.length || 0) === 0
+  // trackers are passive widgets (a fare graph), not "needs you" decisions — split them out
+  const needCards = cards.filter((c) => c.intent !== 'tracker')
+  const trackerCards = cards.filter((c) => c.intent === 'tracker')
+  const empty = ready && cards.length === 0 && watching.length === 0 && (today.calendar?.length || 0) === 0 && !(today.done?.length) && !today.lifetime
 
   return (
     <div className="flex h-full flex-col">
@@ -65,13 +68,25 @@ export default function TodayPage({ onMenu }) {
       {/* the dynamic watch bar — pinned "what matters now" */}
       <WatchBar items={bar} />
 
-      <div className="scroll flex-1 overflow-y-auto px-[18px] pb-28 pt-1">
-        {/* NEEDS YOU — the cards (top dark card is the hero) */}
-        {cards.length > 0 && (
+      <div data-dash-feed className="scroll flex-1 overflow-y-auto px-[18px] pb-28 pt-1">
+        {/* NEEDS YOU — the decision cards (top dark card is the hero) */}
+        {needCards.length > 0 && (
           <section className="mb-[22px]">
-            <div className="sec mb-2.5">needs you · {cards.length}</div>
+            <div className="sec mb-2.5">needs you · {needCards.length}</div>
             <div className="space-y-4">
-              {cards.map((card) => (
+              {needCards.map((card) => (
+                <Card key={card.card_id} card={card} acting={acting === card.card_id} onAct={(a) => onAct(card.card_id, a)} />
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* TRACKING — passive tracker cards (fare graphs etc.) she watches for you */}
+        {trackerCards.length > 0 && (
+          <section className="mb-[22px]">
+            <div className="sec mb-2.5">tracking · {trackerCards.length}</div>
+            <div className="space-y-4">
+              {trackerCards.map((card) => (
                 <Card key={card.card_id} card={card} acting={acting === card.card_id} onAct={(a) => onAct(card.card_id, a)} />
               ))}
             </div>
@@ -112,6 +127,83 @@ export default function TodayPage({ onMenu }) {
           </section>
         )}
 
+        {/* TRACKERS — glanceable stats she keeps (calories / sleep / gym / spend) */}
+        {today.trackers?.length > 0 && (
+          <section className="mb-[22px]">
+            <div className="sec mb-2.5">trackers</div>
+            <div className="grid grid-cols-2 gap-2">
+              {today.trackers.map((t, i) => (
+                <div key={i} className="rounded-[16px] border border-line bg-surface px-3.5 py-3" style={{ boxShadow: '0 1px 1px rgba(63,42,30,0.05)' }}>
+                  <div className="font-serif text-[23px] leading-none text-ink">{t.value}</div>
+                  <div className="mt-1 text-[11px] font-semibold text-faint">{t.label}{t.sub ? ` · ${t.sub}` : ''}</div>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* SCHEDULED — tasks with a due time */}
+        {today.scheduled?.length > 0 && (
+          <section className="mb-[22px]">
+            <div className="sec mb-2.5">scheduled · {today.scheduled.length}</div>
+            <div className="overflow-hidden rounded-[18px] border border-line bg-surface" style={{ boxShadow: '0 1px 1px rgba(63,42,30,0.05)' }}>
+              {today.scheduled.map((s, i) => (
+                <div key={i} className={`flex items-center gap-3 px-[17px] py-3 ${i ? 'border-t border-line' : ''}`}>
+                  <svg className="h-[15px] w-[15px] flex-shrink-0 text-faint" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="9" /><path d="M12 8v4l2.5 1.5" />
+                  </svg>
+                  <span className="min-w-0 flex-1 truncate text-[14px] font-semibold text-ink/80">{s.title}</span>
+                  <span className={`flex-shrink-0 text-[11px] font-bold ${s.urgent ? 'text-rust' : 'text-faint'}`}>{s.when}</span>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* TODAY · DONE — the day's resolved wins (M9 close, demo) */}
+        {today.done?.length > 0 && (
+          <section className="mb-[22px]">
+            <div className="sec mb-2.5">today · done · {today.done.length}</div>
+            <div className="overflow-hidden rounded-[18px] border border-line bg-surface" style={{ boxShadow: '0 1px 1px rgba(63,42,30,0.05)' }}>
+              {today.done.map((d, i) => (
+                <div key={i} className={`flex items-center gap-3 px-[17px] py-2.5 ${i ? 'border-t border-line' : ''}`}>
+                  <svg className="h-3.5 w-3.5 flex-shrink-0 text-rust" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12l5 5L20 6" /></svg>
+                  <span className="flex-1 text-[13.5px] text-ink/80">{d.text}</span>
+                  <span className="flex-shrink-0 text-[11px] font-bold tabular-nums text-faint">{d.time}</span>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* STILL HOLDING */}
+        {today.holding_open?.length > 0 && (
+          <section className="mb-[22px]">
+            <div className="sec mb-2.5">still holding · {today.holding_open.length}</div>
+            <div className="overflow-hidden rounded-[18px] border border-line bg-surface" style={{ boxShadow: '0 1px 1px rgba(63,42,30,0.05)' }}>
+              {today.holding_open.map((w, i) => (
+                <div key={i} className={`flex items-center gap-3 px-[17px] py-3 ${i ? 'border-t border-line' : ''}`}>
+                  <span className="h-1.5 w-1.5 flex-shrink-0 rounded-full" style={{ background: '#C99A7E' }} />
+                  <span className="truncate text-[14px] font-semibold text-ink/80">{w.title}</span>
+                  <span className="ml-auto flex-shrink-0 text-[11px] font-bold uppercase tracking-wide text-faint">{w.type}</span>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* THE MOAT — lifetime stats */}
+        {today.lifetime && (
+          <section className="mb-[22px] grid grid-cols-3 gap-2 text-center">
+            {[['days with donna', today.lifetime.days], ['things caught', today.lifetime.caught], ['on time', today.lifetime.on_time]].map(([label, val], i) => (
+              <div key={i} className="rounded-[16px] border border-line bg-surface py-4">
+                <div className="font-serif text-[25px] leading-none text-ink">{val}</div>
+                <div className="mt-1 px-1 text-[9px] font-bold uppercase leading-tight tracking-wide text-faint">{label}</div>
+              </div>
+            ))}
+          </section>
+        )}
+
         {/* empty */}
         {empty && (
           <div className="px-2 pt-12">
@@ -124,7 +216,7 @@ export default function TodayPage({ onMenu }) {
         )}
 
         {/* pulse */}
-        {today.holding > 0 && (
+        {today.holding > 0 && !today.done && (
           <div className="pt-1 text-center text-[12px] font-semibold text-faint">
             holding <b className="text-soft">{today.holding} things</b> · all quiet otherwise
           </div>

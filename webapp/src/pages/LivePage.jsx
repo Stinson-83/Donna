@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import Bubble from '../components/Bubble.jsx'
+import Card from '../components/Card.jsx'
 import { streamChat } from '../api.js'
 import { getUserId } from '../identity.js'
 import { loadThread, saveThread } from '../chatStore.js'
@@ -9,6 +10,37 @@ import { loadThread, saveThread } from '../chatStore.js'
 // thinking; a Talk button for the voice session. Wired to the real chat stream.
 const PROSE_TYPES = new Set(['text', 'cta'])
 
+// ── DEMO play mode timing — how long Donna "types" before a turn, and the beat
+// after it. Proportional to message length so longer messages feel weightier.
+function textLen(item) {
+  if (item.type === 'text' || item.type === 'cta') return (item.text || '').length
+  if (item.type === 'card') return 64
+  return (item.statement || item.question || item.text || item.explanation || '').length + 38
+}
+const typeMs = (item) => Math.min(2100, 640 + textLen(item) * 15)
+const tailMs = (item) => (item.type === 'card' ? 820 : 560)
+
+// A voice-note waveform — deterministic bar heights (no randomness so renders are
+// reproducible). Light bars on the rust user bubble.
+export function Waveform({ bars = 30, color = 'rgba(255,255,255,0.78)' }) {
+  return (
+    <span className="flex items-center gap-[2px]">
+      {Array.from({ length: bars }).map((_, i) => {
+        const h = 3 + Math.round(9 * Math.abs(Math.sin(i * 1.3) * Math.cos(i * 0.5)))
+        return <span key={i} style={{ width: 2, height: h, borderRadius: 1, background: color, opacity: 0.55 + (h / 24) }} />
+      })}
+    </span>
+  )
+}
+
+export function PlayGlyph({ color = '#fff' }) {
+  return (
+    <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 flex-shrink-0" style={{ fill: color }}>
+      <path d="M8 5v14l11-7z" />
+    </svg>
+  )
+}
+
 function rich(text) {
   return String(text || '').split(/(\*\*[^*]+\*\*)/g).map((p, i) =>
     p.startsWith('**') && p.endsWith('**')
@@ -17,15 +49,42 @@ function rich(text) {
   )
 }
 
-export default function LivePage() {
-  const [messages, setMessages] = useState(loadThread)
+export default function LivePage({ seedThread = null, now = null, play = null } = {}) {
+  const [messages, setMessages] = useState(() => (play ? [] : (seedThread ?? loadThread())))
   const [busy, setBusy] = useState(false)
   const [status, setStatus] = useState(null)
   const [calling, setCalling] = useState(false)
   const userId = useRef(getUserId())
   const feedRef = useRef(null)
 
-  useEffect(() => { saveThread(messages) }, [messages])
+  useEffect(() => { if (!seedThread && !play) saveThread(messages) }, [messages, seedThread, play])
+
+  // DEMO play mode: reveal `play` thread over time with a typing beat before each
+  // Donna turn, so a recorder can film one continuous conversation. Signals
+  // window.__demoPlay.done when finished (the capture script waits on it).
+  useEffect(() => {
+    if (!play) return
+    let cancelled = false
+    const timers = []
+    const add = (delay, fn) => timers.push(setTimeout(() => { if (!cancelled) fn() }, delay))
+    let at = 650 // preroll on the empty chat
+    play.forEach((m) => {
+      if (m.from === 'donna') {
+        add(at, () => { setBusy(true); setStatus('thinking') })
+        at += typeMs(m.item)
+        add(at, () => { setBusy(false); setStatus(null); setMessages((cur) => [...cur, m]) })
+        at += tailMs(m.item)
+      } else {
+        at += 760 // you read, then reply
+        add(at, () => setMessages((cur) => [...cur, m]))
+        at += 340
+      }
+    })
+    at += 720 // hold on the last frame
+    window.__demoPlay = { done: false, duration: at }
+    add(at, () => { window.__demoPlay = { done: true, duration: at } })
+    return () => { cancelled = true; timers.forEach(clearTimeout) }
+  }, [play])
   useEffect(() => {
     feedRef.current?.scrollTo({ top: feedRef.current.scrollHeight, behavior: 'smooth' })
   }, [messages, status])
@@ -52,6 +111,7 @@ export default function LivePage() {
       <div className="flex flex-shrink-0 items-center justify-between px-5 pb-3 pt-4">
         <h1 className="font-serif text-[28px] leading-none text-ink">Live</h1>
         <span className="flex items-center gap-1.5 rounded-full border border-line bg-surface px-2.5 py-1 text-[12px] font-semibold text-soft">
+          {now && <span className="tabular-nums text-faint">{now}</span>}
           <span className="h-1.5 w-1.5 rounded-full" style={{ background: '#3D7A4E', boxShadow: '0 0 0 3px rgba(61,122,78,0.15)' }} />
           {busy ? status || 'thinking' : 'here'}
         </span>
@@ -59,7 +119,7 @@ export default function LivePage() {
 
       {/* feed */}
       <div ref={feedRef} className="scroll flex-1 overflow-y-auto px-[18px] pb-4 pt-1">
-        {messages.length === 0 && !busy && (
+        {messages.length === 0 && !busy && !play && (
           <p className="pt-8 text-[16.5px] leading-[1.62] text-soft">
             tell me what's on your mind. i'll remember the parts that matter.
           </p>
@@ -68,15 +128,28 @@ export default function LivePage() {
         {messages.map((m, i) => {
           const prevSame = i > 0 && messages[i - 1].from === m.from
           if (m.from === 'user') {
+            const isVoice = m.item.type === 'voice'
             return (
-              <div key={i} className="mb-7 flex flex-col items-end">
+              <div key={i} className="reveal mb-7 flex flex-col items-end">
                 <div
-                  className="max-w-[84%] rounded-[18px] rounded-br-[5px] px-[15px] py-[11px] text-[15px] leading-[1.5] text-white"
+                  className="max-w-[84%] rounded-[18px] rounded-br-[5px] px-[16px] py-[11px] text-[15.5px] font-medium leading-[1.5] text-white"
                   style={{ background: 'linear-gradient(180deg,#8A604E 0%,#7B5544 60%,#6C4A3A 100%)', boxShadow: '0 2px 6px rgba(101,68,53,0.28), inset 0 1px 0 rgba(255,255,255,0.2)' }}
                 >
-                  {m.item.text || m.item.caption || ''}
+                  {isVoice ? (
+                    <span className="flex items-center gap-2.5">
+                      <PlayGlyph />
+                      <Waveform />
+                      <span className="text-[11px] tabular-nums text-white/80">{m.item.dur || '0:03'}</span>
+                    </span>
+                  ) : (
+                    m.item.text || m.item.caption || ''
+                  )}
                 </div>
-                <div className="mt-1.5 mr-1 text-[11px] font-medium text-faint">Delivered</div>
+                {isVoice ? (
+                  <div className="mt-1.5 mr-1 max-w-[80%] text-right text-[13px] italic leading-snug text-soft">“{m.item.text}”</div>
+                ) : (
+                  <div className="mt-1.5 mr-1 text-[11px] font-medium text-faint">Delivered</div>
+                )}
               </div>
             )
           }
@@ -88,9 +161,11 @@ export default function LivePage() {
                   <b className="font-bold text-accent">Donna</b>
                 </div>
               )}
-              {PROSE_TYPES.has(it.type) ? (
+              {it.type === 'card' ? (
+                <div className="reveal"><Card card={it.card} onAct={() => {}} /></div>
+              ) : PROSE_TYPES.has(it.type) ? (
                 <>
-                  <p className="text-[16.5px] leading-[1.62] text-ink">{rich(it.text)}</p>
+                  <p className="reveal text-[17.5px] font-medium leading-[1.55] tracking-[-0.004em] text-ink">{rich(it.text)}</p>
                   {it.type === 'cta' && Array.isArray(it.buttons) && (
                     <div className="mt-3 flex flex-wrap gap-2">
                       {it.buttons.map((b) => (
