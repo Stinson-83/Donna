@@ -112,3 +112,22 @@ async def exchange(body: ExchangeBody) -> dict:
 async def me(user_id: str = Depends(current_user_id)) -> dict:
     """Validate the session and return who it is — the dashboard's bootstrap call."""
     return {"user_id": user_id, "name": await _user_name(user_id)}
+
+
+class DevLinkBody(BaseModel):
+    user: str
+
+
+@router.post("/auth/dev_token")
+async def dev_token(body: DevLinkBody) -> dict:
+    """DEV-ONLY: mint a magic token for a user so the dashboard auth flow can be
+    exercised without the WhatsApp link. Fails closed (404) once require_auth is
+    enabled, so it is inert in any real/public deploy."""
+    from config import settings
+
+    if getattr(settings, "require_auth", False):
+        raise HTTPException(status_code=404, detail="not_found")
+    from api.push import resolve_user_id
+
+    user_id = await resolve_user_id(body.user)
+    return {"magic": mint_magic_token(user_id), "user_id": user_id}

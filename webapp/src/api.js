@@ -1,4 +1,5 @@
 import { mockChat } from './mock.js'
+import { getUserId, authHeaders } from './identity.js'
 
 // Backend base URL. Set VITE_API_BASE in .env for prod (Railway URL).
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:8000'
@@ -7,6 +8,30 @@ const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:8000'
 // `npm run dev` works immediately; set VITE_MOCK=0 in .env once the backend is
 // up to talk to the real brain.
 const MOCK = import.meta.env.VITE_MOCK !== '0'
+
+// Shared authed fetch: every request carries the Bearer session (when present)
+// AND ?user= as the back-compat fallback. The backend's current_user_id resolves
+// the caller from the Bearer first, the query param otherwise.
+export function apiUrl(path) {
+  const sep = path.includes('?') ? '&' : '?'
+  return `${API_BASE}${path}${sep}user=${encodeURIComponent(getUserId())}`
+}
+
+export async function apiGet(path) {
+  const res = await fetch(apiUrl(path), { headers: { ...authHeaders() } })
+  if (!res.ok) throw new Error(`${path} failed: ${res.status}`)
+  return res.json()
+}
+
+export async function apiPost(path, body) {
+  const res = await fetch(apiUrl(path), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
+    body: JSON.stringify(body || {}),
+  })
+  if (!res.ok) throw new Error(`${path} failed: ${res.status}`)
+  return res.json()
+}
 
 /**
  * Send one user message to Donna.
@@ -18,7 +43,7 @@ export async function sendChat(message, user) {
   if (MOCK) return mockChat(message, user)
   const res = await fetch(`${API_BASE}/chat`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body: JSON.stringify({ message, user }),
   })
   if (!res.ok) throw new Error(`chat failed: ${res.status}`)
@@ -56,7 +81,7 @@ export async function streamChat(message, user, handlers = {}) {
   try {
     res = await fetch(`${API_BASE}/chat/stream`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
       body: JSON.stringify({ message, user }),
     })
   } catch (e) {

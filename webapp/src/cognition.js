@@ -2,13 +2,10 @@
 // the CURRENT identity (the same id chat uses), so chat + beliefs + memory are
 // one person's mind. Each getter throws on failure so callers can fall back.
 import { getUserId } from './identity.js'
-
-const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:8000'
+import { apiGet, apiPost } from './api.js'
 
 async function get(path) {
-  const res = await fetch(`${API_BASE}/cognition${path}?user=${encodeURIComponent(getUserId())}`)
-  if (!res.ok) throw new Error(`${path} → ${res.status}`)
-  return res.json()
+  return apiGet(`/cognition${path}`)
 }
 
 export const getPlan = () => get('/plan')
@@ -22,13 +19,7 @@ export const getOpenLoops = () => get('/open-loops')
 
 // writes — leaving a thought feeds the same model the screens read.
 async function post(path, body) {
-  const res = await fetch(`${API_BASE}/cognition${path}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ user: getUserId(), ...body }),
-  })
-  if (!res.ok) throw new Error(`${path} → ${res.status}`)
-  return res.json()
+  return apiPost(`/cognition${path}`, { user: getUserId(), ...body })
 }
 
 export const postJournal = (text) => post('/journal', { text })

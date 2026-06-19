@@ -1,7 +1,8 @@
 // Cards + watches API client. Mirrors api.js conventions: API_BASE, the `?user=`
 // param, and a MOCK fallback so `npm run dev` shows the surface with no backend.
-import { API_BASE, MOCK } from './api.js'
+import { MOCK, apiGet, apiPost } from './api.js'
 import { getUserId } from './identity.js'
+import { activeFixture } from './demo/store.js'
 
 // ── MOCK fixtures (same shape as the real endpoints) ─────────────────────
 const MOCK_CARDS = [
@@ -59,30 +60,24 @@ const MOCK_WATCHES = [
 
 // ── API ──────────────────────────────────────────────────────────────────
 export async function getCards(user = getUserId()) {
+  const f = activeFixture()
+  if (f) return { cards: f.cards ?? [] }
   if (MOCK) return { cards: MOCK_CARDS }
-  const res = await fetch(`${API_BASE}/cards?user=${encodeURIComponent(user)}`)
-  if (!res.ok) throw new Error(`cards failed: ${res.status}`)
-  return res.json()
+  return apiGet('/cards')
 }
 
 export async function actCard(cardId, actionId, user = getUserId()) {
   if (MOCK) {
     return { status: 'ok', cards: MOCK_CARDS.filter((c) => c.card_id !== cardId) }
   }
-  const res = await fetch(`${API_BASE}/cards/action`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ user, card_id: cardId, action_id: actionId }),
-  })
-  if (!res.ok) throw new Error(`card action failed: ${res.status}`)
-  return res.json()
+  return apiPost('/cards/action', { user, card_id: cardId, action_id: actionId })
 }
 
 export async function getWatches(user = getUserId()) {
+  const f = activeFixture()
+  if (f) return { watching: f.watching ?? [] }
   if (MOCK) return { watching: MOCK_WATCHES }
-  const res = await fetch(`${API_BASE}/watches?user=${encodeURIComponent(user)}`)
-  if (!res.ok) throw new Error(`watches failed: ${res.status}`)
-  return res.json()
+  return apiGet('/watches')
 }
 
 // The Dynamic Watch Bar — one ranked "what matters now" across cards/watches/tasks.
@@ -95,10 +90,10 @@ const MOCK_WATCHBAR = [
 ]
 
 export async function getWatchbar(user = getUserId()) {
+  const f = activeFixture()
+  if (f) return { items: f.watchbar ?? [] }
   if (MOCK) return { items: MOCK_WATCHBAR }
-  const res = await fetch(`${API_BASE}/watchbar?user=${encodeURIComponent(user)}`)
-  if (!res.ok) throw new Error(`watchbar failed: ${res.status}`)
-  return res.json()
+  return apiGet('/watchbar')
 }
 
 const MOCK_TODAY = {
@@ -112,10 +107,10 @@ const MOCK_TODAY = {
 }
 
 export async function getToday(user = getUserId()) {
+  const f = activeFixture()
+  if (f) return f.today ?? MOCK_TODAY
   if (MOCK) return MOCK_TODAY
-  const res = await fetch(`${API_BASE}/today?user=${encodeURIComponent(user)}`)
-  if (!res.ok) throw new Error(`today failed: ${res.status}`)
-  return res.json()
+  return apiGet('/today')
 }
 
 const MOCK_HISTORY = [
@@ -128,48 +123,32 @@ const MOCK_HISTORY = [
 
 export async function getHistory(user = getUserId()) {
   if (MOCK) return { messages: MOCK_HISTORY }
-  const res = await fetch(`${API_BASE}/history?user=${encodeURIComponent(user)}`)
-  if (!res.ok) throw new Error(`history failed: ${res.status}`)
-  return res.json()
+  return apiGet('/history')
 }
 
 export async function runOnboarding(user = getUserId()) {
   if (MOCK) return { status: 'complete', events: 0, relationships: 0 }
-  const res = await fetch(`${API_BASE}/onboarding/run`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ user }),
-  })
-  if (!res.ok) throw new Error(`onboarding failed: ${res.status}`)
-  return res.json()
+  return apiPost('/onboarding/run', { user })
 }
 
 // Start an OAuth connection (real Composio). Returns { url } to open; on
 // completion the backend webhook auto-runs the backfill.
 export async function connectAccount(provider = 'googlecalendar', user = getUserId()) {
   if (MOCK) return { ok: true, url: null, provider, mock: true }
-  const res = await fetch(`${API_BASE}/onboarding/connect`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ user, provider }),
-  })
-  if (!res.ok) throw new Error(`connect failed: ${res.status}`)
-  return res.json()
+  return apiPost('/onboarding/connect', { user, provider })
 }
 
 export async function getOnboardingStatus(user = getUserId()) {
   if (MOCK) return { complete: true, relationships: 3, calendar_events: 6 }
-  const res = await fetch(`${API_BASE}/onboarding/status?user=${encodeURIComponent(user)}`)
-  if (!res.ok) throw new Error(`status failed: ${res.status}`)
-  return res.json()
+  return apiGet('/onboarding/status')
 }
 
 // Library drawer counts: people, documents, trackers, todos, connected.
 export async function getLibrary(user = getUserId()) {
+  const f = activeFixture()
+  if (f?.library) return f.library
   if (MOCK) return { people: 31, documents: 38, trackers: 7, todos: 5, connected: 3 }
-  const res = await fetch(`${API_BASE}/library?user=${encodeURIComponent(user)}`)
-  if (!res.ok) throw new Error(`library failed: ${res.status}`)
-  return res.json()
+  return apiGet('/library')
 }
 
 // To-dos detail (admin tasks + open commitments), deadlined first.
@@ -181,20 +160,12 @@ const MOCK_TODOS = [
 
 export async function getTodos(user = getUserId()) {
   if (MOCK) return { todos: MOCK_TODOS }
-  const res = await fetch(`${API_BASE}/library/todos?user=${encodeURIComponent(user)}`)
-  if (!res.ok) throw new Error(`todos failed: ${res.status}`)
-  return res.json()
+  return apiGet('/library/todos')
 }
 
 export async function doneTodo(id, user = getUserId()) {
   if (MOCK) return { ok: true }
-  const res = await fetch(`${API_BASE}/library/todos/done`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ user, id }),
-  })
-  if (!res.ok) throw new Error(`todo done failed: ${res.status}`)
-  return res.json()
+  return apiPost('/library/todos/done', { user, id })
 }
 
 // Trackers detail (active watches incl. cadence + flight state).
@@ -206,20 +177,12 @@ const MOCK_TRACKERS = [
 
 export async function getTrackers(user = getUserId()) {
   if (MOCK) return { trackers: MOCK_TRACKERS }
-  const res = await fetch(`${API_BASE}/library/trackers?user=${encodeURIComponent(user)}`)
-  if (!res.ok) throw new Error(`trackers failed: ${res.status}`)
-  return res.json()
+  return apiGet('/library/trackers')
 }
 
 export async function retireTracker(id, user = getUserId()) {
   if (MOCK) return { ok: true }
-  const res = await fetch(`${API_BASE}/library/trackers/retire`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ user, id }),
-  })
-  if (!res.ok) throw new Error(`tracker retire failed: ${res.status}`)
-  return res.json()
+  return apiPost('/library/trackers/retire', { user, id })
 }
 
 // People detail (relationships from the living profile).
@@ -231,9 +194,7 @@ const MOCK_PEOPLE = [
 
 export async function getPeople(user = getUserId()) {
   if (MOCK) return { people: MOCK_PEOPLE }
-  const res = await fetch(`${API_BASE}/library/people?user=${encodeURIComponent(user)}`)
-  if (!res.ok) throw new Error(`people failed: ${res.status}`)
-  return res.json()
+  return apiGet('/library/people')
 }
 
 // Documents detail.
@@ -244,9 +205,7 @@ const MOCK_DOCS = [
 
 export async function getDocuments(user = getUserId()) {
   if (MOCK) return { documents: MOCK_DOCS }
-  const res = await fetch(`${API_BASE}/library/documents?user=${encodeURIComponent(user)}`)
-  if (!res.ok) throw new Error(`documents failed: ${res.status}`)
-  return res.json()
+  return apiGet('/library/documents')
 }
 
 // Connected accounts detail.
@@ -258,26 +217,16 @@ const MOCK_CONNECTED = [
 
 export async function getConnected(user = getUserId()) {
   if (MOCK) return { connected: MOCK_CONNECTED }
-  const res = await fetch(`${API_BASE}/library/connected?user=${encodeURIComponent(user)}`)
-  if (!res.ok) throw new Error(`connected failed: ${res.status}`)
-  return res.json()
+  return apiGet('/library/connected')
 }
 
 // Which surface Donna reaches you on: 'auto' | 'app' | 'whatsapp'.
 export async function getSettings(user = getUserId()) {
   if (MOCK) return { notify_channel: 'auto' }
-  const res = await fetch(`${API_BASE}/settings?user=${encodeURIComponent(user)}`)
-  if (!res.ok) throw new Error(`settings failed: ${res.status}`)
-  return res.json()
+  return apiGet('/settings')
 }
 
 export async function setNotifyChannel(channel, user = getUserId()) {
   if (MOCK) return { notify_channel: channel }
-  const res = await fetch(`${API_BASE}/settings`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ user, notify_channel: channel }),
-  })
-  if (!res.ok) throw new Error(`settings failed: ${res.status}`)
-  return res.json()
+  return apiPost('/settings', { user, notify_channel: channel })
 }
