@@ -1,12 +1,17 @@
 import { useState } from 'react'
+import { isNative } from '../native.js'
 
 // Not a "+ create" button. A quiet invitation to leave a thought with Donna.
+// 'a thought' opens the Live chat — app-only; on the web, chat is on WhatsApp,
+// so only the capture actions (which write into the cognition layer) are offered.
 const ACTIONS = [
   { key: 'chat', label: 'a thought' },
   { key: 'voice', label: 'a voice note' },
   { key: 'capture', label: 'something quick' },
   { key: 'journal', label: 'a journal entry' },
 ]
+
+const VISIBLE_ACTIONS = isNative ? ACTIONS : ACTIONS.filter((a) => a.key !== 'chat')
 
 export default function Fab({ onAction }) {
   const [open, setOpen] = useState(false)
@@ -19,7 +24,7 @@ export default function Fab({ onAction }) {
   return (
     <div className="pointer-events-none absolute bottom-4 right-5 z-30 flex flex-col items-end gap-2">
       {open &&
-        ACTIONS.map((a, i) => (
+        VISIBLE_ACTIONS.map((a, i) => (
           <button
             key={a.key}
             onClick={() => handle(a.key)}

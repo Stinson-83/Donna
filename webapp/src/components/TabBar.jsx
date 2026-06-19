@@ -1,7 +1,9 @@
-// Design-spec navigation (donna-design-spec): Dashboard / Beliefs / Memory / Live / History.
-// Understanding-first: beliefs (what Donna believes) + memory (the evidence) sit
-// right after the dashboard; live + history hold the conversation.
+// Design-spec navigation (donna-design-spec). Understanding-first: beliefs (what
+// Donna believes) + memory (the evidence) sit right after the dashboard.
+// The web dashboard is view-only (chat happens on WhatsApp): Dashboard / Beliefs /
+// Memory / History. The native app additionally surfaces the Live chat tab.
 // Single-weight stroke icons + label; rust marks the active tab.
+import { isNative } from '../native.js'
 const ICON = {
   dashboard: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
@@ -40,13 +42,16 @@ const TABS = [
   { key: 'history', label: 'History' },
 ]
 
+// Live chat is an app-only surface; on the web, chat lives on WhatsApp.
+const VISIBLE_TABS = isNative ? TABS : TABS.filter((t) => t.key !== 'live')
+
 export default function TabBar({ tab, onChange }) {
   return (
     <div
       className="safe-bottom safe-x z-20 flex"
       style={{ background: 'rgba(248,243,236,0.94)', borderTop: '1px solid rgba(63,46,35,0.05)' }}
     >
-      {TABS.map((t) => {
+      {VISIBLE_TABS.map((t) => {
         const active = tab === t.key
         return (
           <button
