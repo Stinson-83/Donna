@@ -41,7 +41,7 @@ export async function apiPost(path, body) {
  */
 export async function sendChat(message, user) {
   if (MOCK) return mockChat(message, user)
-  const res = await fetch(`${API_BASE}/chat`, {
+  const res = await fetch(apiUrl('/chat'), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body: JSON.stringify({ message, user }),
@@ -79,7 +79,7 @@ export async function streamChat(message, user, handlers = {}) {
 
   let res
   try {
-    res = await fetch(`${API_BASE}/chat/stream`, {
+    res = await fetch(apiUrl('/chat/stream'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...authHeaders() },
       body: JSON.stringify({ message, user }),

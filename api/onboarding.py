@@ -20,25 +20,22 @@ router = APIRouter()
 
 
 class RunBody(BaseModel):
-    user: str
+    pass
 
 
 class ConnectBody(BaseModel):
-    user: str
     provider: str | None = "googlecalendar"
 
 
 @router.post("/onboarding/connect")
-async def connect(body: ConnectBody) -> dict:
+async def connect(body: ConnectBody, user_id: str = Depends(current_user_id)) -> dict:
     """Start an OAuth connection for the user (real Composio). The app opens the
     returned url; on completion the connection.complete webhook auto-runs the
     backfill (and the app can also call /onboarding/run to kick it immediately)."""
     from config import settings
 
-    from api.push import resolve_user_id
     from backend.integrations.composio_client import ComposioClient
 
-    user_id = await resolve_user_id(body.user)
     provider = (body.provider or "googlecalendar").strip()
     try:
         _conn, url = await ComposioClient(
@@ -54,11 +51,9 @@ async def connect(body: ConnectBody) -> dict:
 
 
 @router.post("/onboarding/run")
-async def run(body: RunBody) -> dict:
-    from api.push import resolve_user_id
+async def run(body: RunBody, user_id: str = Depends(current_user_id)) -> dict:
     from backend.onboarding.service import run_onboarding
 
-    user_id = await resolve_user_id(body.user)
     result = await run_onboarding(user_id)
     return {"user_id": user_id, **result}
 

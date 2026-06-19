@@ -43,17 +43,14 @@ async def list_cards(user_id: str = Depends(current_user_id)) -> dict:
 
 
 class CardActionBody(BaseModel):
-    user: str
     card_id: str
     action_id: str
 
 
 @router.post("/cards/action")
-async def card_action(body: CardActionBody) -> dict:
-    from api.push import resolve_user_id
+async def card_action(body: CardActionBody, user_id: str = Depends(current_user_id)) -> dict:
     from backend.cards.resolution import resolve_card_action
 
-    user_id = await resolve_user_id(body.user)
     res = await resolve_card_action(
         user_id, f"{body.card_id}:{body.action_id}", surface="app"
     )
@@ -153,7 +150,6 @@ _CHANNELS = {"auto", "app", "whatsapp"}
 
 
 class SettingsBody(BaseModel):
-    user: str
     notify_channel: str
 
 
@@ -171,15 +167,13 @@ async def get_settings(user_id: str = Depends(current_user_id)) -> dict:
 
 
 @router.post("/settings")
-async def set_settings(body: SettingsBody) -> dict:
+async def set_settings(body: SettingsBody, user_id: str = Depends(current_user_id)) -> dict:
     from sqlalchemy import select
 
-    from api.push import resolve_user_id
     from db.models import User
     from db.session import async_session
 
     channel = body.notify_channel if body.notify_channel in _CHANNELS else "auto"
-    user_id = await resolve_user_id(body.user)
     async with async_session() as s:
         u = (await s.execute(select(User).where(User.id == user_id))).scalar_one_or_none()
         if u is not None:
@@ -270,18 +264,15 @@ async def library_todos(user_id: str = Depends(current_user_id)) -> dict:
 
 
 class TodoDoneBody(BaseModel):
-    user: str
     id: str
 
 
 @router.post("/library/todos/done")
-async def library_todo_done(body: TodoDoneBody) -> dict:
+async def library_todo_done(body: TodoDoneBody, user_id: str = Depends(current_user_id)) -> dict:
     """Mark a to-do done. Same settle shape as the close_open_loop tool."""
-    from api.push import resolve_user_id
     from db.models import OpenLoop, utcnow
     from db.session import async_session
 
-    user_id = await resolve_user_id(body.user)
     async with async_session() as s:
         loop = await s.get(OpenLoop, body.id)
         if loop is None or loop.user_id != user_id:
@@ -332,21 +323,18 @@ async def library_trackers(user_id: str = Depends(current_user_id)) -> dict:
 
 
 class TrackerRetireBody(BaseModel):
-    user: str
     id: str
 
 
 @router.post("/library/trackers/retire")
-async def library_tracker_retire(body: TrackerRetireBody) -> dict:
+async def library_tracker_retire(body: TrackerRetireBody, user_id: str = Depends(current_user_id)) -> dict:
     """Stop watching. Uses the watch system's own retire (status flip, no delete)."""
     from sqlalchemy import select
 
-    from api.push import resolve_user_id
     from backend.proactive.watches import retire_watch
     from db.models import Watch
     from db.session import async_session
 
-    user_id = await resolve_user_id(body.user)
     async with async_session() as s:
         w = (await s.execute(select(Watch).where(Watch.id == body.id))).scalar_one_or_none()
         if w is None or w.user_id != user_id:

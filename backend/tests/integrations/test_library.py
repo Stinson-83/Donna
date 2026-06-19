@@ -69,13 +69,14 @@ async def test_library_todos_detail_and_done(db):
     assert out["todos"][0]["category"] == "renewal"
 
     # mark done -> settles like close_open_loop, disappears from the list
-    res = await library_todo_done(TodoDoneBody(user="+lib", id=out["todos"][0]["id"]))
+    res = await library_todo_done(TodoDoneBody(id=out["todos"][0]["id"]), user_id=user_id)
     assert res["ok"] is True
     out2 = await library_todos(user_id=user_id)
     assert [t["content"] for t in out2["todos"]] == ["reply to landlord"]
 
     # another user's todo can't be closed through this user
-    other_out = await library_todo_done(TodoDoneBody(user="+other2", id=out2["todos"][0]["id"]))
+    other_id = await resolve_user_id("+other2")
+    other_out = await library_todo_done(TodoDoneBody(id=out2["todos"][0]["id"]), user_id=other_id)
     assert other_out["ok"] is False
 
 
@@ -102,13 +103,14 @@ async def test_library_trackers_detail_and_retire(db):
     assert out["trackers"][1]["note"] == "2 results seen"   # web carries its baseline size
 
     # retire -> status flip via the watch system, gone from the list
-    res = await library_tracker_retire(TrackerRetireBody(user="+lib", id=out["trackers"][0]["id"]))
+    res = await library_tracker_retire(TrackerRetireBody(id=out["trackers"][0]["id"]), user_id=user_id)
     assert res["ok"] is True
     out2 = await library_trackers(user_id=user_id)
     assert [t["title"] for t in out2["trackers"]] == ["arsenal"]
 
     # cross-user retire is refused
-    res2 = await library_tracker_retire(TrackerRetireBody(user="+other3", id=out2["trackers"][0]["id"]))
+    other_id = await resolve_user_id("+other3")
+    res2 = await library_tracker_retire(TrackerRetireBody(id=out2["trackers"][0]["id"]), user_id=other_id)
     assert res2["ok"] is False
 
 

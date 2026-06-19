@@ -240,39 +240,37 @@ async def get_reasoning(chain_id: str) -> dict:
 
 # ── writes (ingestion) ───────────────────────────────────────────────────────
 class IngestBody(BaseModel):
-    user: str = DEFAULT_USER
     text: str
     topics: list[str] | None = None
     entities: list[str] | None = None
 
 
 @router.post("/journal")
-async def post_journal(body: IngestBody) -> dict:
+async def post_journal(body: IngestBody, user_id: str = Depends(current_user_id)) -> dict:
     async with async_session() as s:
-        res = await ingest(s, user_id=body.user, content=body.text, source_type="journal",
+        res = await ingest(s, user_id=user_id, content=body.text, source_type="journal",
                            topics=body.topics, entities=body.entities, importance=0.6)
         await s.commit()
         return {"ok": True, **res}
 
 
 @router.post("/voice")
-async def post_voice(body: IngestBody) -> dict:
+async def post_voice(body: IngestBody, user_id: str = Depends(current_user_id)) -> dict:
     # transcript-in for now; wire STT (Deepgram) ahead of this when available.
     async with async_session() as s:
-        res = await ingest(s, user_id=body.user, content=body.text, source_type="voice",
+        res = await ingest(s, user_id=user_id, content=body.text, source_type="voice",
                            topics=body.topics, entities=body.entities, importance=0.6)
         await s.commit()
         return {"ok": True, **res}
 
 
 class FeedbackBody(BaseModel):
-    user: str = DEFAULT_USER
     belief_id: str
     signal: str  # "agree" | "disagree"
 
 
 @router.post("/feedback")
-async def post_feedback(body: FeedbackBody) -> dict:
+async def post_feedback(body: FeedbackBody, user_id: str = Depends(current_user_id)) -> dict:
     async with async_session() as s:
         b = await get_belief(s, body.belief_id)
         if not b:
