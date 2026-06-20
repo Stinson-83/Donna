@@ -56,3 +56,8 @@ archive/
 
 # Runtime event log (durable queue is Postgres per ADR §10.2)
 .donna/events.jsonl
+/recordings/
+package.json
+package-lock.json
+remotion-demo/node_modules/
+remotion-demo/out/
