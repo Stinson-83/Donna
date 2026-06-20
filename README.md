@@ -10,6 +10,37 @@ This README explains, in plain language, **what she can do, how all the pieces f
 
 ---
 
+## Start here (new contributors)
+
+New to the codebase? This gets you oriented in ~30 minutes.
+
+**Read in this order:**
+1. **This README** — what Donna is and how the pieces fit (product, plain language).
+2. [`README_TECHNICAL.md`](./README_TECHNICAL.md) — how it's built: the **one architectural rule** (§1), the **request path** (§2), the **repository map** (§9), and **how to run it** (§10).
+3. [`docs_v2/architecture_decision.md`](./docs_v2/architecture_decision.md) — **the ADR**, the canonical architecture. It wins on any conflict.
+4. [`docs/README.md`](./docs/README.md) — the **docs index**: every spec, grouped, with what each is for. Pick a subsystem and read its spec next to the code.
+
+**The one mental model that explains everything:** reasoning happens in exactly **one** place — a single Claude Agent SDK tool-use loop (the BRAIN, on Haiku). Everything else (events, routing, memory, the gate, integrations) is *deterministic machinery wrapped around that loop* — never a second LLM call. If you internalize only one thing, internalize this. (Details: `README_TECHNICAL.md` §1.)
+
+**The shape:** two surfaces, one memory. **WhatsApp** is the chat; the **web dashboard** is the understanding view (Beliefs / Memory / today / history). Inbound (WhatsApp / web / a scheduler / an integration) → normalize → the BRAIN loop → tools + hooks → deliver. Runs as **3 Railway services off one image** (`DONNA_PROCESS_ROLE`: `api` | `proactive` | `reminders`; see `bin/start.sh`).
+
+**Run it (quickstart):**
+```bash
+# backend
+pip install -r requirements.txt
+uvicorn api.main:app --reload                     # needs ANTHROPIC_API_KEY, DATABASE_URL (+ Composio/Exa)
+
+# web dashboard
+cd webapp && npm install && npm run dev           # MOCK mode by default (no backend needed)
+
+# tests (the suite is the source of truth — currently ~520 green)
+env -u PYTHONPATH python -m pytest -q              # see README_TECHNICAL §10 for the env caveat
+```
+
+**Where things live:** the repository map is in [`README_TECHNICAL.md` §9](./README_TECHNICAL.md). In one breath: `api/` (HTTP + webhook) · `donna_runtime/` (the BRAIN loop + tools) · `backend/` (memory, cards/gate, proactive, integrations, cognition) · `ingress/`·`delivery/` (in/out) · `db/` (models) · `webapp/` (the dashboard + Capacitor app) · `bin/`·`scripts/` (the 3 process roles) · `docs/`·`docs_v2/` (specs).
+
+---
+
 ## 1. What Donna does for you
 
 Think of the best executive assistant you can imagine. Donna is built to do that job across every part of your life:
@@ -139,6 +170,7 @@ Honesty matters here. The **thinking engine is real**; some of the **real-world 
 - **Reading your email and calendar** (via a connected Google account).
 - **Web answers** (weather, prices, current events) when she needs the real world.
 - **Drafting and sending an email as you**, and **creating real calendar events**.
+- **The web dashboard** — deployed and **per-user authenticated** (a magic link from WhatsApp → a 30-day session). Beliefs / Memory / today / history, sharing one memory with WhatsApp. Chat stays on WhatsApp; the dashboard is the understanding view.
 
 ### 🟡 Built, but the real-world rail is stubbed (pluggable)
 These work as a *real engine* but don't touch a live third-party service yet — they need an account to be connected:
@@ -147,10 +179,10 @@ These work as a *real engine* but don't touch a live third-party service yet —
 - **Ordering flowers** — stubbed (no florist connected).
 - **Live flight data** — the flight-tracking engine is real, but it needs a flight-data provider plugged in to get live status.
 
-### 🎬 Demo / placeholder (frontend only)
-- **The app ships in "demo mode" by default** so it runs with no backend — every screen shows realistic sample data for one example person (a founder named *aarav* building *poke*, raising from *Sequoia*, moving to *Waterloo*). Flip one setting to point it at the real backend and the screens fill with *your* data instead.
-- **The Memory constellation and the "areas" index** are still sample visuals (the real data path exists but isn't wired to them yet).
-- **The Memory and Beliefs tabs** are parked (built, not shown).
+### 🎬 Dev convenience / still-sample
+- **`npm run dev` runs in "demo mode" by default** (mock data, no backend) so the UI works offline — every screen shows realistic sample data for one example person (a founder *aarav* building *poke*, raising from *Sequoia*). The **deployed** dashboard runs against the real backend, per-user authed. (Beliefs & Memory are live tabs now, not parked.)
+- **The Memory constellation visual** is still a sample render (the real data path exists; the constellation isn't wired to it yet).
+- **Native mobile app** — the same web codebase is Capacitor-wrapped (Android APK builds; iOS project is ready but needs a Mac). On the app, the Live chat tab is also present.
 
 ---
 

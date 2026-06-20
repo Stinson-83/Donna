@@ -180,9 +180,10 @@ Config + secrets: `config.py` (Pydantic settings; env-driven). A missing key deg
 
 ```
 api/            FastAPI server (entrypoint: uvicorn api.main:app) — chat, cards, watches,
-                today, history, library, watchbar, settings, push, onboarding, cognition routes
-donna_runtime/  the BRAIN: brain.py (loop) · tools.py (18 tools) · prompt.py · config.py ·
-                options.py · context_builder.py · hooks.py (Pre/PostToolUse gates)
+                today, history, library, watchbar, settings, push, onboarding, cognition routes,
+                auth (magic-link → session, the per-user web dashboard login)
+donna_runtime/  the BRAIN: brain.py (loop) · tools.py (~23 tools) · prompt.py · config.py ·
+                options.py · context_builder.py · hooks.py (Pre/PostToolUse gates) · capabilities.py
 backend/
   proactive/    runner.py (the tick) · checks.py · watches.py · prepare.py ·
                 schedule_health.py · cross_connect.py · morning_brief.py
@@ -194,12 +195,16 @@ backend/
   travel/       flights.py (flight watch + pluggable status provider)
   cognition/    the beliefs subsystem (store, pipeline, beliefs, observations, questions, api)
   memory/       the nine-backend memory system + retrieval
+  auth/         signed magic-link / session tokens (the dashboard login)
+  onboarding/   first-run backfill + the "open your dashboard" card
   tests/        pytest suites (backend/tests/integrations is the green suite)
-db/             SQLAlchemy models + session ; backend/db/migrations (alembic)
-ingress/        inbound normalization   ·   delivery/   outbound (whatsapp)
-webapp/         React + Vite frontend
-docs_v2/        canonical specs (architecture_decision.md is authoritative)
-bin/  scripts/  ops entrypoints (api | reminders), schedule worker, seeding
+db/             SQLAlchemy models + session ; backend/db/migrations (alembic, defined not run;
+                runtime uses create_all + an additive column reconciler — see db/migrations.py)
+ingress/        inbound normalization   ·   delivery/   outbound (whatsapp + session window)
+webapp/         React + Vite + Capacitor — the web dashboard (Beliefs / Memory / today / history,
+                magic-link auth) AND the native app (which adds the Live chat tab via isNative)
+docs/  docs_v2/ specs (docs/README.md is the index; docs_v2/architecture_decision.md is authoritative)
+bin/  scripts/  the 3 process roles (api | proactive | reminders; bin/start.sh) + the workers
 ```
 
 ---
@@ -224,10 +229,10 @@ npm run dev                            # MOCK mode by default — runs with no b
 npm run build
 ```
 
-**Tests** (the integration suite is the source of truth — ~193 green):
+**Tests** (the suite is the source of truth — ~520 green):
 ```bash
-python -m pytest backend/tests/integrations -q
-python -m pytest tests/test_tool_allowlist.py -q     # allow-list ↔ registered-tools guard
+env -u PYTHONPATH python -m pytest -q                            # the whole suite
+env -u PYTHONPATH python -m pytest tests/test_tool_allowlist.py -q   # allow-list ↔ registered-tools guard
 ```
 > Env note: this repo's `.venv` lacks pytest and a ROS plugin can break collection — run via a full Python with `env -u PYTHONPATH python -m pytest …`.
 
